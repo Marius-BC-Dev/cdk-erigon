@@ -57,6 +57,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		SequencerInitialForkId:     ctx.Uint64(utils.SequencerInitialForkId.Name),
 		ExecutorUrls:               strings.Split(ctx.String(utils.ExecutorUrls.Name), ","),
 		ExecutorStrictMode:         ctx.Bool(utils.ExecutorStrictMode.Name),
+		ExecutorRecordToDisk:       ctx.Bool(utils.ExecutorRecordToDisk.Name),
 		AllowFreeTransactions:      ctx.Bool(utils.AllowFreeTransactions.Name),
 		AllowPreEIP155Transactions: ctx.Bool(utils.AllowPreEIP155Transactions.Name),
 		WitnessFull:                ctx.Bool(utils.WitnessFullFlag.Name),

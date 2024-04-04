@@ -793,9 +793,16 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 					GrpcUrls: cfg.ExecutorUrls,
 					Timeout:  time.Second * 5,
 				}
-				executors := legacy_executor_verifier.NewExecutors(levCfg)
-				for _, e := range executors {
-					legacyExecutors = append(legacyExecutors, e)
+				if cfg.ExecutorRecordToDisk {
+					executors := legacy_executor_verifier.NewExecutorsRecording(levCfg, cfg.WitnessFull)
+					for _, e := range executors {
+						legacyExecutors = append(legacyExecutors, e)
+					}
+				} else {
+					executors := legacy_executor_verifier.NewExecutors(levCfg)
+					for _, e := range executors {
+						legacyExecutors = append(legacyExecutors, e)
+					}
 				}
 			}
 

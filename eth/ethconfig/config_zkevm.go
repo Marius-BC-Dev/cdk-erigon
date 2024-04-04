@@ -28,6 +28,7 @@ type Zk struct {
 	SequencerInitialForkId     uint64
 	ExecutorUrls               []string
 	ExecutorStrictMode         bool
+	ExecutorRecordToDisk       bool
 	AllowFreeTransactions      bool
 	AllowPreEIP155Transactions bool
 

@@ -186,6 +186,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.SequencerInitialForkId,
 	&utils.ExecutorUrls,
 	&utils.ExecutorStrictMode,
+	&utils.ExecutorRecordToDisk,
 	&utils.AllowFreeTransactions,
 	&utils.AllowPreEIP155Transactions,
 	&utils.DataStreamHost,
