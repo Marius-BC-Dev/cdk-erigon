@@ -2,7 +2,7 @@ version: "3.5"
 
 services:
   pric-erigon-master-1:
-    image: myronzhangweb3/cdk-erigon-abc:latest
+    image: cdk-erigon-abc:latest
     command: --config /usr/local/config.yaml
     environment:
       - name=value
@@ -14,7 +14,7 @@ services:
     restart: unless-stopped
     mem_swappiness: 0
   pric-erigon-master-2:
-    image: myronzhangweb3/cdk-erigon-abc:latest
+    image: cdk-erigon-abc:latest
     command: --config /usr/local/config.yaml
     environment:
       - name=value
@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
     mem_swappiness: 0
   pric-erigon-master-3:
-    image: myronzhangweb3/cdk-erigon-abc:latest
+    image: cdk-erigon-abc:latest
     command: --config /usr/local/config.yaml
     environment:
       - name=value
@@ -39,7 +39,7 @@ services:
     restart: unless-stopped
     mem_swappiness: 0
   pric-erigon-expand-1-1:
-    image: myronzhangweb3/cdk-erigon-abc:latest
+    image: cdk-erigon-abc:latest
     command: --config /usr/local/config.yaml --zkevm.l2-datastreamer-url=pric-erigon-master-1:10220
     environment:
       - name=value
@@ -51,7 +51,7 @@ services:
     restart: unless-stopped
     mem_swappiness: 0
   pric-erigon-expand-2-1:
-    image: myronzhangweb3/cdk-erigon-abc:latest
+    image: cdk-erigon-abc:latest
     command: --config /usr/local/config.yaml --zkevm.l2-datastreamer-url=pric-erigon-master-2:10220
     environment:
       - name=value
