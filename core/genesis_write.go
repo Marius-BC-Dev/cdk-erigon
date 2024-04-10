@@ -27,12 +27,12 @@ import (
 	"sync"
 
 	"github.com/c2h5oh/datasize"
-	"github.com/holiman/uint256"
 	erigonchain "github.com/gateway-fm/cdk-erigon-lib/chain"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/gateway-fm/cdk-erigon-lib/kv/mdbx"
 	"github.com/gateway-fm/cdk-erigon-lib/kv/rawdbv3"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/log/v3"
 
@@ -49,8 +49,8 @@ import (
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/params/networkname"
-	"github.com/ledgerwatch/erigon/smt/pkg/smt"
 	eridb "github.com/ledgerwatch/erigon/smt/pkg/db"
+	"github.com/ledgerwatch/erigon/smt/pkg/smt"
 	"golang.org/x/exp/slices"
 )
 
@@ -674,6 +674,10 @@ func GenesisBlockByChainName(chain string) *types.Genesis {
 		return HermezCardonaInternalGenesisBlock()
 	case networkname.X1TestnetChainName:
 		return X1TestnetGenesisBlock()
+	case networkname.LomuzPrivateTestChainLayer2ChainName:
+		return LomuzPrivateChainLayer2GenesisBlock()
+	case networkname.MerlinV2TestnetChainName:
+		return MerlinV2TestnetGenesisBlock()
 	default:
 		return nil
 	}

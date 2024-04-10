@@ -1,5 +1,7 @@
 # cdk-erigon
 
+> base: https://github.com/0xPolygonHermez/cdk-erigon/releases/tag/v1.0.5
+
 cdk-erigon is a fork of Erigon, currently in Alpha, optimized for syncing with the Polygon Hermez zkEVM network.
 
 ***

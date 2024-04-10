@@ -104,7 +104,8 @@ func SpawnStageDataStreamCatchup(
 		return err
 	}
 
-	finalBlockNumber = highestVerifiedBlock
+	finalBlockNumber = highestExecutedBlock
+	//finalBlockNumber = highestVerifiedBlock
 	if highestExecutedBlock < finalBlockNumber {
 		finalBlockNumber = highestExecutedBlock
 	}

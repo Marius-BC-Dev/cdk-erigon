@@ -50,23 +50,25 @@ func readChainSpec(filename string) *chain.Config {
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash                 = libcommon.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
-	SepoliaGenesisHash                 = libcommon.HexToHash("0x25a5cc106eea7138acab33231d7160d69cb777ee0c2c553fcddf5138993e6dd9")
-	RinkebyGenesisHash                 = libcommon.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177")
-	GoerliGenesisHash                  = libcommon.HexToHash("0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a")
-	MumbaiGenesisHash                  = libcommon.HexToHash("0x7b66506a9ebdbf30d32b43c5f15a3b1216269a1ec3a75aa3182b86176a2b1ca7")
-	BorMainnetGenesisHash              = libcommon.HexToHash("0xa9c28ce2141b56c474f1dc504bee9b01eb1bd7d1a507580d5519d4437a97de1b")
-	BorDevnetGenesisHash               = libcommon.HexToHash("0x5a06b25b0c6530708ea0b98a3409290e39dce6be7f558493aeb6e4b99a172a87")
-	GnosisGenesisHash                  = libcommon.HexToHash("0x4f1dd23188aab3a76b463e4af801b52b1248ef073c648cbdc4c9333d3da79756")
-	ChiadoGenesisHash                  = libcommon.HexToHash("0xada44fd8d2ecab8b08f256af07ad3e777f17fb434f8f8e678b312f576212ba9a")
-	HermezMainnetGenesisHash           = libcommon.HexToHash("0x81005434635456a16f74ff7023fbe0bf423abbc8a8deb093ffff455c0ad3b741")
-	HermezMainnetShadowforkGenesisHash = libcommon.HexToHash("0xe54709058a084845156393707161a7b3347859b1796167ca014354841f68373c")
-	HermezLocalDevnetGenesisHash       = libcommon.HexToHash("0x433043a1b0948d109cd92a6b7e0e5a3f011c761d70eebe3135ec8f7a39815a65")
-	HermezESTestGenesisHash            = libcommon.HexToHash("0x8c630b598fab24a99b59cdd8257f41b35d0aca992f13cd381c7591f5e89eec58")
-	HermezCardonaGenesisHash           = libcommon.HexToHash("0x676c1a76a6c5855a32bdf7c61977a0d1510088a4eeac1330466453b3d08b60b9")
-	HermezCardonaInternalGenesisHash   = libcommon.HexToHash("0x7311011ce6ab98ef0a15e44fe29f7680909588322534d1736361daa678543038")
-	X1TestnetGenesisHash               = libcommon.HexToHash("0x0ffb92e130f1acaabd8b12aa1bb409b46561ef7568cb8aa7eb8d102a6ab76566")
-	HermezEtrogGenesisHash             = libcommon.HexToHash("0xccfed260e3ef666b058dcd577551de8e00c743c47774a39ca7dbcd9214ba370a")
+	MainnetGenesisHash                     = libcommon.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
+	SepoliaGenesisHash                     = libcommon.HexToHash("0x25a5cc106eea7138acab33231d7160d69cb777ee0c2c553fcddf5138993e6dd9")
+	RinkebyGenesisHash                     = libcommon.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177")
+	GoerliGenesisHash                      = libcommon.HexToHash("0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a")
+	MumbaiGenesisHash                      = libcommon.HexToHash("0x7b66506a9ebdbf30d32b43c5f15a3b1216269a1ec3a75aa3182b86176a2b1ca7")
+	BorMainnetGenesisHash                  = libcommon.HexToHash("0xa9c28ce2141b56c474f1dc504bee9b01eb1bd7d1a507580d5519d4437a97de1b")
+	BorDevnetGenesisHash                   = libcommon.HexToHash("0x5a06b25b0c6530708ea0b98a3409290e39dce6be7f558493aeb6e4b99a172a87")
+	GnosisGenesisHash                      = libcommon.HexToHash("0x4f1dd23188aab3a76b463e4af801b52b1248ef073c648cbdc4c9333d3da79756")
+	ChiadoGenesisHash                      = libcommon.HexToHash("0xada44fd8d2ecab8b08f256af07ad3e777f17fb434f8f8e678b312f576212ba9a")
+	HermezMainnetGenesisHash               = libcommon.HexToHash("0x81005434635456a16f74ff7023fbe0bf423abbc8a8deb093ffff455c0ad3b741")
+	HermezMainnetShadowforkGenesisHash     = libcommon.HexToHash("0xe54709058a084845156393707161a7b3347859b1796167ca014354841f68373c")
+	HermezLocalDevnetGenesisHash           = libcommon.HexToHash("0x433043a1b0948d109cd92a6b7e0e5a3f011c761d70eebe3135ec8f7a39815a65")
+	HermezESTestGenesisHash                = libcommon.HexToHash("0x8c630b598fab24a99b59cdd8257f41b35d0aca992f13cd381c7591f5e89eec58")
+	HermezCardonaGenesisHash               = libcommon.HexToHash("0x676c1a76a6c5855a32bdf7c61977a0d1510088a4eeac1330466453b3d08b60b9")
+	HermezCardonaInternalGenesisHash       = libcommon.HexToHash("0x7311011ce6ab98ef0a15e44fe29f7680909588322534d1736361daa678543038")
+	X1TestnetGenesisHash                   = libcommon.HexToHash("0x0ffb92e130f1acaabd8b12aa1bb409b46561ef7568cb8aa7eb8d102a6ab76566")
+	HermezEtrogGenesisHash                 = libcommon.HexToHash("0xccfed260e3ef666b058dcd577551de8e00c743c47774a39ca7dbcd9214ba370a")
+	LumozPrivateChainLayer2GenesisHash     = libcommon.HexToHash("0x68ca1c9ea72965f7067e20f68f0d9b7a2969bd20d099d7275d055225e7abe6ce")
+	MerlinV2Layer2TestChainNameGenesisHash = libcommon.HexToHash("0x4189beeca3e6406dfc2f37f818ad1b7d08a1d7687268ba108a67c4edaf5be5ff")
 )
 
 var (
@@ -153,6 +155,12 @@ var (
 	HermezBaliChainConfig = readChainSpec("chainspecs/hermez-bali.json")
 
 	X1TestnetChainConfig = readChainSpec("chainspecs/x1-testnet.json")
+
+	LumozPrivateTestnetConfig       = readChainSpec("chainspecs/lumoz-private-testnet.json")
+	LumozPrivateTestnetLayer2Config = readChainSpec("chainspecs/lumoz-private-testnet-layer2.json")
+
+	SaasL1TestnetConfig   = readChainSpec("chainspecs/saas-l1-testnet.json")
+	MerlinV2TestnetConfig = readChainSpec("chainspecs/merlin-v2-testnet.json")
 
 	CliqueSnapshot = NewSnapshotConfig(10, 1024, 16384, true, "")
 
@@ -250,6 +258,14 @@ func ChainConfigByChainName(chain string) *chain.Config {
 		return HermezBaliChainConfig
 	case networkname.X1TestnetChainName:
 		return X1TestnetChainConfig
+	case networkname.LomuzPrivateTestChainChainName:
+		return LumozPrivateTestnetConfig
+	case networkname.LomuzPrivateTestChainLayer2ChainName:
+		return LumozPrivateTestnetLayer2Config
+	case networkname.SaasL1TestnetChainName:
+		return SaasL1TestnetConfig
+	case networkname.MerlinV2TestnetChainName:
+		return MerlinV2TestnetConfig
 	default:
 		return nil
 	}
@@ -291,6 +307,10 @@ func GenesisHashByChainName(chain string) *libcommon.Hash {
 		return &HermezCardonaInternalGenesisHash
 	case networkname.X1TestnetChainName:
 		return &X1TestnetGenesisHash
+	case networkname.LomuzPrivateTestChainLayer2ChainName:
+		return &LumozPrivateChainLayer2GenesisHash
+	case networkname.MerlinV2TestnetChainName:
+		return &MerlinV2Layer2TestChainNameGenesisHash
 	default:
 		return nil
 	}
@@ -328,6 +348,10 @@ func ChainConfigByGenesisHash(genesisHash libcommon.Hash) *chain.Config {
 		return HermezCardonaChainConfig
 	case genesisHash == HermezCardonaInternalGenesisHash:
 		return HermezBaliChainConfig
+	case genesisHash == LumozPrivateChainLayer2GenesisHash:
+		return LumozPrivateTestnetLayer2Config
+	case genesisHash == MerlinV2Layer2TestChainNameGenesisHash:
+		return MerlinV2TestnetConfig
 	default:
 		panic(fmt.Sprintf("Unknown genesis hash: %s", genesisHash.Hex()))
 		return nil

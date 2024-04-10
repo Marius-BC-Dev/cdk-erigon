@@ -90,6 +90,26 @@ func X1TestnetGenesisBlock() *types.Genesis {
 	}
 }
 
+func LomuzPrivateChainLayer2GenesisBlock() *types.Genesis {
+	return &types.Genesis{
+		Config:     params.LumozPrivateTestnetLayer2Config,
+		Timestamp:  1712317293,
+		GasLimit:   0x0,
+		Difficulty: big.NewInt(0x0),
+		Alloc:      readPrealloc("allocs/lumoz-private-chain-layer2.json"),
+	}
+}
+
+func MerlinV2TestnetGenesisBlock() *types.Genesis {
+	return &types.Genesis{
+		Config:     params.MerlinV2TestnetConfig,
+		Timestamp:  1712033416,
+		GasLimit:   0x0,
+		Difficulty: big.NewInt(0x0),
+		Alloc:      readPrealloc("allocs/merlin-v2-testnet.json"),
+	}
+}
+
 func processAccount(s *smt.SMT, root *big.Int, a *types.GenesisAccount, addr libcommon.Address) (*big.Int, error) {
 
 	// store the account balance and nonce

@@ -1,0 +1,64 @@
+version: "3.5"
+
+services:
+  pric-erigon-master-1:
+    image: myronzhangweb3/cdk-erigon-abc:latest
+    command: --config /usr/local/config.yaml
+    environment:
+      - name=value
+    ports: 
+      - "8545:8545"
+    volumes:
+      - ./data/docker/erigon-data-master-1-data:/home/erigon/.local/share/erigon
+      - ./docker-config/hermezconfig-lumoz-private-chain-layer2.yaml:/usr/local/config.yaml
+    restart: unless-stopped
+    mem_swappiness: 0
+  pric-erigon-master-2:
+    image: myronzhangweb3/cdk-erigon-abc:latest
+    command: --config /usr/local/config.yaml
+    environment:
+      - name=value
+    ports:
+      - "8546:8545"
+    volumes:
+      - ./data/docker/erigon-data-master-2-data:/home/erigon/.local/share/erigon
+      - ./docker-config/hermezconfig-lumoz-private-chain-layer2.yaml:/usr/local/config.yaml
+    restart: unless-stopped
+    mem_swappiness: 0
+  pric-erigon-master-3:
+    image: myronzhangweb3/cdk-erigon-abc:latest
+    command: --config /usr/local/config.yaml
+    environment:
+      - name=value
+    ports:
+      - "8547:8545"
+      - "10220:10220"
+    volumes:
+      - ./data/docker/erigon-data-master-3-data:/home/erigon/.local/share/erigon
+      - ./docker-config/hermezconfig-lumoz-private-chain-layer2.yaml:/usr/local/config.yaml
+    restart: unless-stopped
+    mem_swappiness: 0
+  pric-erigon-expand-1-1:
+    image: myronzhangweb3/cdk-erigon-abc:latest
+    command: --config /usr/local/config.yaml --zkevm.l2-datastreamer-url=pric-erigon-master-1:10220
+    environment:
+      - name=value
+    ports:
+      - "8645:8545"
+    volumes:
+      - ./data/docker/erigon-data-expand-1-1-data:/home/erigon/.local/share/erigon
+      - ./docker-config/hermezconfig-lumoz-private-chain-layer2.yaml:/usr/local/config.yaml
+    restart: unless-stopped
+    mem_swappiness: 0
+  pric-erigon-expand-2-1:
+    image: myronzhangweb3/cdk-erigon-abc:latest
+    command: --config /usr/local/config.yaml --zkevm.l2-datastreamer-url=pric-erigon-master-2:10220
+    environment:
+      - name=value
+    ports:
+      - "8646:8545"
+    volumes:
+      - ./data/docker/erigon-data-expand-2-1-data:/home/erigon/.local/share/erigon
+      - ./docker-config/hermezconfig-lumoz-private-chain-layer2.yaml:/usr/local/config.yaml
+    restart: unless-stopped
+    mem_swappiness: 0

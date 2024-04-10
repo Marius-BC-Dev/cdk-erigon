@@ -9,6 +9,11 @@ const (
 	HermezBaliChainName              = "hermez-bali"
 	X1TestnetChainName               = "x1-testnet"
 	HermezEtrogChainName             = "hermez-etrog"
+
+	LomuzPrivateTestChainChainName       = "lumoz-private-chain"
+	LomuzPrivateTestChainLayer2ChainName = "lumoz-private-chain-layer2"
+	SaasL1TestnetChainName               = "saas-l1-testnet"
+	MerlinV2TestnetChainName             = "merlin-v2-testnet"
 )
 
 var Zkevm = []string{
