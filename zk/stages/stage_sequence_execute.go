@@ -219,14 +219,10 @@ func SpawnSequencingStage(
 	thisBatch := lastBatch + 1
 	batchTicker := time.NewTicker(cfg.zk.SequencerBatchSealTime)
 	batchCounters := vm.NewBatchCounterCollector(smt.GetDepth(), uint16(forkId))
-	log.Info(fmt.Sprintf("[%s] Starting batch %d...", logPrefix, thisBatch))
-
 	overflow := false
 
-	var addedTransactions []types.Transaction
-	var addedReceipts []*types.Receipt
-	yielded := mapset.NewSet[[32]byte]()
-	lastTxTime := time.Now()
+	log.Info(fmt.Sprintf("[%s] Starting batch %d...", logPrefix, thisBatch))
+
 LOOP_BLOCKS:
 	for {
 		select {
@@ -253,9 +249,14 @@ LOOP_BLOCKS:
 			}
 
 			// start waiting for a new transaction to arrive
-			logTicker := time.NewTicker(10 * time.Second)
 			log.Info(fmt.Sprintf("[%s] Waiting for txs from the pool...", logPrefix))
 
+			var addedTransactions []types.Transaction
+			var addedReceipts []*types.Receipt
+			yielded := mapset.NewSet[[32]byte]()
+			lastTxTime := time.Now()
+
+			logTicker := time.NewTicker(10 * time.Second)
 			blockTicker := time.NewTicker(cfg.zk.SequencerBlockSealTime)
 
 			// start to wait for transactions to come in from the pool and attempt to add them to the current batch.  Once we detect a counter
@@ -289,6 +290,7 @@ LOOP_BLOCKS:
 						}
 						if overflow {
 							log.Info(fmt.Sprintf("[%s] overflowed adding transaction to batch", logPrefix), "batch", thisBatch, "tx-hash", transaction.Hash())
+							panic("CURRENT IMPLEMENTATION DOES NOT WORK")
 							break LOOP_TRANSACTIONS
 						}
 
@@ -312,6 +314,7 @@ LOOP_BLOCKS:
 			// todo: can we handle this scenario without needing to re-process the transactions?  We're doing this currently because the IBS can't be reverted once a tx has been
 			// finalised within it - it causes a panic
 			if overflow {
+				panic("CURRENT IMPLEMENTATION DOES NOT WORK")
 				// we know now that we have a list of good transactions, so we need to get a fresh intra block state and re-run the known good ones
 				// before continuing on
 				batchCounters.ClearTransactionCounters()
@@ -354,7 +357,6 @@ LOOP_BLOCKS:
 			}
 
 			log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions...", logPrefix, bn+1, len(addedTransactions)))
-			addedTransactions = []types.Transaction{}
 			//TODO: If there are no transactions just delete all block related data in the db and do not increment the bn variable
 			bn++
 		}
