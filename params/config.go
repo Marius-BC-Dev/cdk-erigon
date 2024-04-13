@@ -69,6 +69,7 @@ var (
 	HermezEtrogGenesisHash                 = libcommon.HexToHash("0xccfed260e3ef666b058dcd577551de8e00c743c47774a39ca7dbcd9214ba370a")
 	LumozPrivateChainLayer2GenesisHash     = libcommon.HexToHash("0x68ca1c9ea72965f7067e20f68f0d9b7a2969bd20d099d7275d055225e7abe6ce")
 	MerlinV2Layer2TestChainNameGenesisHash = libcommon.HexToHash("0x4189beeca3e6406dfc2f37f818ad1b7d08a1d7687268ba108a67c4edaf5be5ff")
+	ZkevmFor58ChainNameGenesisHash         = libcommon.HexToHash("0x1103460d9ee0d856a57066f1dadeb7bd5605d0b0d269b707d3681560971088c2")
 )
 
 var (
@@ -161,6 +162,7 @@ var (
 
 	SaasL1TestnetConfig   = readChainSpec("chainspecs/saas-l1-testnet.json")
 	MerlinV2TestnetConfig = readChainSpec("chainspecs/merlin-v2-testnet.json")
+	ZkevmFor58Config      = readChainSpec("chainspecs/zkevm-fork5-8.json")
 
 	CliqueSnapshot = NewSnapshotConfig(10, 1024, 16384, true, "")
 
@@ -266,6 +268,8 @@ func ChainConfigByChainName(chain string) *chain.Config {
 		return SaasL1TestnetConfig
 	case networkname.MerlinV2TestnetChainName:
 		return MerlinV2TestnetConfig
+	case networkname.ZkevmFork58ChainName:
+		return ZkevmFor58Config
 	default:
 		return nil
 	}
@@ -311,6 +315,8 @@ func GenesisHashByChainName(chain string) *libcommon.Hash {
 		return &LumozPrivateChainLayer2GenesisHash
 	case networkname.MerlinV2TestnetChainName:
 		return &MerlinV2Layer2TestChainNameGenesisHash
+	case networkname.ZkevmFork58ChainName:
+		return &ZkevmFor58ChainNameGenesisHash
 	default:
 		return nil
 	}
@@ -352,6 +358,8 @@ func ChainConfigByGenesisHash(genesisHash libcommon.Hash) *chain.Config {
 		return LumozPrivateTestnetLayer2Config
 	case genesisHash == MerlinV2Layer2TestChainNameGenesisHash:
 		return MerlinV2TestnetConfig
+	case genesisHash == ZkevmFor58ChainNameGenesisHash:
+		return ZkevmFor58Config
 	default:
 		panic(fmt.Sprintf("Unknown genesis hash: %s", genesisHash.Hex()))
 		return nil

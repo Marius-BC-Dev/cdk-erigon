@@ -28,7 +28,6 @@ import (
 
 	"github.com/gateway-fm/cdk-erigon-lib/kv/kvcfg"
 
-	"github.com/gballet/go-verkle"
 	common2 "github.com/gateway-fm/cdk-erigon-lib/common"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/cmp"
@@ -36,6 +35,7 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/common/hexutility"
 	"github.com/gateway-fm/cdk-erigon-lib/common/length"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/gballet/go-verkle"
 	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon/common"
@@ -61,6 +61,7 @@ func ReadCanonicalHash(db kv.Getter, number uint64) (libcommon.Hash, error) {
 
 // WriteCanonicalHash stores the hash assigned to a canonical block number.
 func WriteCanonicalHash(db kv.Putter, hash libcommon.Hash, number uint64) error {
+	log.Info("WriteCanonicalHash", "hash", hash, "number", number)
 	if err := db.Put(kv.HeaderCanonical, hexutility.EncodeTs(number), hash.Bytes()); err != nil {
 		return fmt.Errorf("failed to store number to hash mapping: %w", err)
 	}
@@ -69,6 +70,7 @@ func WriteCanonicalHash(db kv.Putter, hash libcommon.Hash, number uint64) error 
 
 // TruncateCanonicalHash removes all the number to hash canonical mapping from block number N
 func TruncateCanonicalHash(tx kv.RwTx, blockFrom uint64, deleteHeaders bool) error {
+	log.Info("TruncateCanonicalHash", "blockFrom", blockFrom, "deleteHeaders", deleteHeaders)
 	if err := tx.ForEach(kv.HeaderCanonical, hexutility.EncodeTs(blockFrom), func(k, v []byte) error {
 		block := binary.BigEndian.Uint64(k)
 		if deleteHeaders {
@@ -327,6 +329,7 @@ func WriteHeader(db kv.Putter, header *types.Header) {
 		number  = header.Number.Uint64()
 		encoded = hexutility.EncodeTs(number)
 	)
+	log.Info("WriteHeader", "height", number)
 	if err := db.Put(kv.HeaderNumber, hash[:], encoded); err != nil {
 		log.Crit("Failed to store hash to number mapping", "err", err)
 	}

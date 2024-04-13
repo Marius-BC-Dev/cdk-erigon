@@ -678,6 +678,8 @@ func GenesisBlockByChainName(chain string) *types.Genesis {
 		return LomuzPrivateChainLayer2GenesisBlock()
 	case networkname.MerlinV2TestnetChainName:
 		return MerlinV2TestnetGenesisBlock()
+	case networkname.ZkevmFork58ChainName:
+		return ZkevmFork58GenesisBlock()
 	default:
 		return nil
 	}
