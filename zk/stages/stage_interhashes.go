@@ -40,6 +40,7 @@ import (
 	"github.com/ledgerwatch/erigon/zk"
 	"github.com/status-im/keycard-go/hexutils"
 	"os"
+	"github.com/ledgerwatch/erigon/core/rawdb"
 )
 
 type ZkInterHashesCfg struct {
@@ -109,6 +110,7 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 				log.Error("Hashing Failed", "block", to, "err", err)
 				os.Exit(1)
 			} else if to >= cfg.zk.DebugLimit {
+				tx.Commit()
 				os.Exit(0)
 			}
 		}
@@ -212,15 +214,19 @@ func UnwindZkIntermediateHashesStage(u *stagedsync.UnwindState, s *stagedsync.St
 		}
 		defer tx.Rollback()
 	}
+	log.Debug(fmt.Sprintf("[%s] Unwinding intermediate hashes", s.LogPrefix()), "from", s.BlockNumber, "to", u.UnwindPoint)
 
-	syncHeadHeader, err := cfg.blockReader.HeaderByNumber(ctx, tx, u.UnwindPoint)
+	var expectedRootHash libcommon.Hash
+	syncHeadHeader := rawdb.ReadHeaderByNumber(tx, u.UnwindPoint)
 	if err != nil {
 		return err
 	}
 	if syncHeadHeader == nil {
-		return fmt.Errorf("header not found for block number %d", u.UnwindPoint)
+		//return fmt.Errorf("header not found for block number %d", u.UnwindPoint)
+		log.Warn("header not found for block number", "block", u.UnwindPoint)
+	} else {
+		expectedRootHash = syncHeadHeader.Root
 	}
-	expectedRootHash := syncHeadHeader.Root
 
 	root, err := unwindZkSMT(s.LogPrefix(), s.BlockNumber, u.UnwindPoint, tx, false, &expectedRootHash, quit)
 	if err != nil {
@@ -470,6 +476,11 @@ func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, 
 	dbSmt := smt.NewSMT(eridb)
 
 	log.Info(fmt.Sprintf("[%s]", logPrefix), "last root", libcommon.BigToHash(dbSmt.LastRoot()))
+
+	if quit == nil {
+		log.Warn("quit channel is nil, creating a new one")
+		quit = make(chan struct{})
+	}
 
 	eridb.OpenBatch(quit)
 

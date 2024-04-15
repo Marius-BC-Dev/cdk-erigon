@@ -65,9 +65,9 @@ func SpawnStageL1Syncer(
 ) error {
 
 	///// DEBUG BISECT /////
-	if cfg.zkCfg.DebugLimit > 0 {
-		return nil
-	}
+	// if cfg.zkCfg.DebugLimit > 0 {
+	//	return nil
+	// }
 	///// DEBUG BISECT /////
 
 	logPrefix := s.LogPrefix()
@@ -242,8 +242,39 @@ func UnwindL1SyncerStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg L1SyncerCfg,
 		}
 		defer tx.Rollback()
 	}
+	log.Debug("l1 sync: unwinding")
 
-	// TODO: implement unwind verifications stage!
+	/*
+		1. unwind sequences table
+		2. unwind verifications table
+		3. update l1verifications batchno and l1syncer stage progress
+	*/
+
+	hermezDb := hermez_db.NewHermezDb(tx)
+	err = hermezDb.TruncateSequences(u.UnwindPoint)
+	if err != nil {
+		return err
+	}
+
+	err = hermezDb.TruncateVerifications(u.UnwindPoint)
+	if err != nil {
+		return err
+	}
+
+	// get the now latest l1 verification
+	v, err := hermezDb.GetLatestVerification()
+	if err != nil {
+		return err
+	}
+
+	if v != nil {
+		if err := stages.SaveStageProgress(tx, stages.L1VerificationsBatchNo, v.BatchNo); err != nil {
+			return fmt.Errorf("failed to save stage progress, %w", err)
+		}
+		if err := stages.SaveStageProgress(tx, stages.L1Syncer, v.L1BlockNo); err != nil {
+			return fmt.Errorf("failed to save stage progress, %w", err)
+		}
+	}
 
 	if err := u.Done(tx); err != nil {
 		return err
