@@ -76,36 +76,42 @@ func SpawnSequencingStage(
 			return err
 		}
 	} else {
+		var addedTransactions []types.Transaction
+		var addedReceipts []*types.Receipt
+		var clonedBatchCounters *vm.BatchCounterCollector
+
 		thisBatch := lastBatch + 1
 		batchTicker := time.NewTicker(cfg.zk.SequencerBatchSealTime)
 		batchCounters := vm.NewBatchCounterCollector(sdb.smt.GetDepth(), uint16(forkId))
-		overflow := false
 		runLoopBlocks := true
+		lastStartedBn := executionAt - 1
 		yielded := mapset.NewSet[[32]byte]()
 
 		log.Info(fmt.Sprintf("[%s] Starting batch %d...", logPrefix, thisBatch))
 
 		for bn := executionAt; runLoopBlocks; bn++ {
 			log.Info(fmt.Sprintf("[%s] Starting block %d...", logPrefix, bn+1))
+
+			reRunBlockAfterOverflow := bn == lastStartedBn
+			lastStartedBn = bn
+
+			if !reRunBlockAfterOverflow {
+				clonedBatchCounters = batchCounters.Clone()
+				addedTransactions = []types.Transaction{}
+				addedReceipts = []*types.Receipt{}
+			} else {
+				batchCounters = clonedBatchCounters
+			}
+
 			header, parentBlock, err := prepareHeader(tx, bn, forkId, cfg.zk.AddressSequencer)
+			thisBlockNumber := header.Number.Uint64()
 			if err != nil {
 				return err
 			}
 
-			// start waiting for a new transaction to arrive
-			log.Info(fmt.Sprintf("[%s] Waiting for txs from the pool...", logPrefix))
-
-			var addedTransactions []types.Transaction
-			var addedReceipts []*types.Receipt
-			lastTxTime := time.Now()
-			ibs := state.New(sdb.stateReader)
-
-			logTicker := time.NewTicker(10 * time.Second)
-			blockTicker := time.NewTicker(cfg.zk.SequencerBlockSealTime)
-
-			// whilst in the 1 batch = 1 block = 1 tx flow we can immediately add in the changeL2BlockTx calculation
-			// as this is the first tx we can skip the overflow check
 			batchCounters.StartNewBlock()
+
+			ibs := state.New(sdb.stateReader)
 
 			// calculate and store the l1 info tree index used for this block
 			l1TreeUpdateIndex, l1TreeUpdate, err := calculateNextL1TreeUpdateToUse(tx, sdb.hermezDb)
@@ -121,73 +127,67 @@ func SpawnSequencingStage(
 			}
 
 			parentRoot := parentBlock.Root()
-			if err = handleStateForNewBlockStarting(cfg.chainConfig, sdb.hermezDb, ibs, bn+1, header.Time, &parentRoot, l1TreeUpdate); err != nil {
+			if err = handleStateForNewBlockStarting(cfg.chainConfig, sdb.hermezDb, ibs, thisBlockNumber, header.Time, &parentRoot, l1TreeUpdate); err != nil {
 				return err
 			}
 
-			// start to wait for transactions to come in from the pool and attempt to add them to the current batch.  Once we detect a counter
-			// overflow we revert the IBS back to the previous snapshot and don't add the transaction/receipt to the collection that will
-			// end up in the finalised block
-		LOOP_TRANSACTIONS:
-			for {
-				select {
-				case <-logTicker.C:
-					log.Info(fmt.Sprintf("[%s] Waiting some more for txs from the pool...", logPrefix))
-				case <-blockTicker.C:
-					// runLoopBlocks = false
-					break LOOP_TRANSACTIONS
-				case <-batchTicker.C:
-					runLoopBlocks = false
-					break LOOP_TRANSACTIONS
-				default:
-					cfg.txPool.LockFlusher()
-					transactions, err := getNextTransactions(cfg, executionAt, forkId, yielded)
-					if err != nil {
-						return err
-					}
-					cfg.txPool.UnlockFlusher()
+			if !reRunBlockAfterOverflow {
+				// start waiting for a new transaction to arrive
+				log.Info(fmt.Sprintf("[%s] Waiting for txs from the pool...", logPrefix))
 
-					for _, transaction := range transactions {
-						var receipt *types.Receipt
-						receipt, overflow, err = attemptAddTransaction(cfg, sdb, ibs, batchCounters, header, parentBlock.Header(), transaction)
+				logTicker := time.NewTicker(10 * time.Second)
+				blockTicker := time.NewTicker(cfg.zk.SequencerBlockSealTime)
+				overflow := false
+
+				// start to wait for transactions to come in from the pool and attempt to add them to the current batch.  Once we detect a counter
+				// overflow we revert the IBS back to the previous snapshot and don't add the transaction/receipt to the collection that will
+				// end up in the finalised block
+			LOOP_TRANSACTIONS:
+				for {
+					select {
+					case <-logTicker.C:
+						log.Info(fmt.Sprintf("[%s] Waiting some more for txs from the pool...", logPrefix))
+					case <-blockTicker.C:
+						break LOOP_TRANSACTIONS
+					case <-batchTicker.C:
+						runLoopBlocks = false
+						break LOOP_TRANSACTIONS
+					default:
+						cfg.txPool.LockFlusher()
+						transactions, err := getNextTransactions(cfg, executionAt, forkId, yielded)
 						if err != nil {
 							return err
 						}
-						if overflow {
-							log.Info(fmt.Sprintf("[%s] overflowed adding transaction to batch", logPrefix), "batch", thisBatch, "tx-hash", transaction.Hash())
-							panic("CURRENT IMPLEMENTATION DOES NOT WORK")
-							break LOOP_TRANSACTIONS
+						cfg.txPool.UnlockFlusher()
+
+						for i, transaction := range transactions {
+							var receipt *types.Receipt
+							receipt, overflow, err = attemptAddTransaction(cfg, sdb, ibs, batchCounters, header, parentBlock.Header(), transaction)
+							if err != nil {
+								return err
+							}
+							if overflow {
+								log.Info(fmt.Sprintf("[%s] overflowed adding transaction to batch", logPrefix), "batch", thisBatch, "tx-hash", transaction.Hash())
+
+								// remove from yielded so they can be processed again
+								txSize := len(transactions)
+								for ; i < txSize; i++ {
+									yielded.Remove(transaction.Hash())
+								}
+
+								break LOOP_TRANSACTIONS
+							}
+
+							addedTransactions = append(addedTransactions, transaction)
+							addedReceipts = append(addedReceipts, receipt)
 						}
-
-						addedTransactions = append(addedTransactions, transaction)
-						addedReceipts = append(addedReceipts, receipt)
-					}
-
-					// if there were no transactions in this check, and we have some transactions to process, and we've waited long enough for
-					// more to arrive then close the batch
-					timeNow := time.Now()
-					sinceLastTx := timeNow.Sub(lastTxTime)
-					if len(transactions) > 0 {
-						lastTxTime = timeNow
-					} else if len(addedTransactions) > 0 && sinceLastTx > 250*time.Millisecond {
-						// log.Info(fmt.Sprintf("[%s] No new transactions, closing block at %v transactions", logPrefix, len(addedTransactions)))
-						// break LOOP_TRANSACTIONS
 					}
 				}
-			}
-
-			// todo: can we handle this scenario without needing to re-process the transactions?  We're doing this currently because the IBS can't be reverted once a tx has been
-			// finalised within it - it causes a panic
-			if overflow {
-				panic("CURRENT IMPLEMENTATION DOES NOT WORK")
-				// we know now that we have a list of good transactions, so we need to get a fresh intra block state and re-run the known good ones
-				// before continuing on
-				batchCounters.ClearTransactionCounters()
-				ibs = state.New(sdb.stateReader)
-
-				// it was incremented before, so needs resetting here
-				header.GasUsed = 0
-
+				if overflow {
+					bn--     // in order to trigger reRunBlockAfterOverflow check
+					continue // lets execute the same block again
+				}
+			} else {
 				for idx, transaction := range addedTransactions {
 					receipt, innerOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, header, parentBlock.Header(), transaction)
 					if err != nil {
@@ -199,29 +199,18 @@ func SpawnSequencingStage(
 					}
 					addedReceipts[idx] = receipt
 				}
+				runLoopBlocks = false // close the batch because there are no counters left
 			}
 
-			if err = sdb.hermezDb.WriteBlockL1InfoTreeIndex(bn+1, l1TreeUpdateIndex); err != nil {
+			if err = sdb.hermezDb.WriteBlockL1InfoTreeIndex(thisBlockNumber, l1TreeUpdateIndex); err != nil {
 				return err
 			}
 
-			if err = finaliseBlock(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, ger, l1BlockHash, addedTransactions, addedReceipts); err != nil {
+			if err = doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, ger, l1BlockHash, addedTransactions, addedReceipts); err != nil {
 				return err
 			}
 
-			if err = updateSequencerProgress(tx, bn+1, thisBatch, l1TreeUpdateIndex); err != nil {
-				return err
-			}
-
-			if cfg.accumulator != nil {
-				txs, err := rawdb.RawTransactionsRange(tx, header.Number.Uint64(), header.Number.Uint64())
-				if err != nil {
-					return err
-				}
-				cfg.accumulator.StartChange(header.Number.Uint64(), header.Hash(), txs, false)
-			}
-
-			log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions...", logPrefix, bn+1, len(addedTransactions)))
+			log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions...", logPrefix, thisBlockNumber, len(addedTransactions)))
 		}
 
 		counters, err := batchCounters.CombineCollectors()

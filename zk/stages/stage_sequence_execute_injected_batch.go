@@ -52,17 +52,10 @@ func processInjectedInitialBatch(
 	if err != nil {
 		return err
 	}
+
 	txns := types.Transactions{*txn}
 	receipts := types.Receipts{receipt}
-	if err = finaliseBlock(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, injectedBatchNumber, injected.LastGlobalExitRoot, injected.L1ParentHash, txns, receipts); err != nil {
-		return err
-	}
-
-	if err = updateSequencerProgress(sdb.tx, injectedBatchBlockNumber, injectedBatchNumber, 0); err != nil {
-		return err
-	}
-
-	return nil
+	return doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, injectedBatchNumber, injected.LastGlobalExitRoot, injected.L1ParentHash, txns, receipts)
 }
 
 func handleInjectedBatch(

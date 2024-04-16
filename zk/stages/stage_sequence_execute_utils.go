@@ -1,6 +1,7 @@
 package stages
 
 import (
+	"context"
 	"time"
 
 	"github.com/c2h5oh/datasize"
@@ -20,6 +21,7 @@ import (
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/ethdb/prune"
 	db2 "github.com/ledgerwatch/erigon/smt/pkg/db"
@@ -172,13 +174,13 @@ func prepareForkId(cfg SequenceBlockCfg, lastBatch, executionAt uint64, hermezDb
 	return forkId, nil
 }
 
-func prepareHeader(tx kv.RwTx, bn, forkId uint64, coinbase common.Address) (*types.Header, *types.Block, error) {
-	parentBlock, err := rawdb.ReadBlockByNumber(tx, bn)
+func prepareHeader(tx kv.RwTx, previousBlockNumber, forkId uint64, coinbase common.Address) (*types.Header, *types.Block, error) {
+	parentBlock, err := rawdb.ReadBlockByNumber(tx, previousBlockNumber)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	nextBlockNum := bn + 1
+	nextBlockNum := previousBlockNumber + 1
 	newBlockTimestamp := uint64(time.Now().Unix())
 
 	return &types.Header{
@@ -240,20 +242,38 @@ func updateSequencerProgress(tx kv.RwTx, newHeight uint64, newBatch uint64, l1In
 	return nil
 }
 
-// if executionAt == 1 {
-// 	// from := executionAt + 1
-// 	fmt.Println("DEBUG 2")
-// 	to := bn + 1
-// 	for i := uint64(0); i <= to; i++ {
-// 		psr := state2.NewPlainState(tx, i+1, systemcontracts.SystemContractCodeLookup["Hermez"])
-// 		address := libcommon.Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 92, 161, 171, 30}
-// 		sstorageKey := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-// 		stk := libcommon.BytesToHash(sstorageKey)
-// 		value, err := psr.ReadAccountStorage(address, 1, &stk)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		fmt.Printf("Value for block %d\n", i)
-// 		fmt.Println(value)
-// 	}
-// }
+func doFinishBlockAndUpdateState(
+	ctx context.Context,
+	cfg SequenceBlockCfg,
+	s *stagedsync.StageState,
+	sdb *stageDb,
+	ibs *state.IntraBlockState,
+	header *types.Header,
+	parentBlock *types.Block,
+	forkId uint64,
+	thisBatch uint64,
+	ger common.Hash,
+	l1BlockHash common.Hash,
+	transactions []types.Transaction,
+	receipts types.Receipts,
+) error {
+	thisBlockNumber := header.Number.Uint64()
+
+	if err := finaliseBlock(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, ger, l1BlockHash, transactions, receipts); err != nil {
+		return err
+	}
+
+	if err := updateSequencerProgress(sdb.tx, thisBlockNumber, thisBatch, 0); err != nil {
+		return err
+	}
+
+	if cfg.accumulator != nil {
+		txs, err := rawdb.RawTransactionsRange(sdb.tx, thisBlockNumber, thisBlockNumber)
+		if err != nil {
+			return err
+		}
+		cfg.accumulator.StartChange(thisBlockNumber, header.Hash(), txs, false)
+	}
+
+	return nil
+}

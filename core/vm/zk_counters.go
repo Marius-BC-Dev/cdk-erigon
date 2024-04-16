@@ -48,6 +48,15 @@ type Counter struct {
 	initialAmount int
 }
 
+func (c *Counter) Clone() *Counter {
+	return &Counter{
+		remaining:     c.remaining,
+		used:          c.used,
+		name:          c.name,
+		initialAmount: c.initialAmount,
+	}
+}
+
 func (c *Counter) Used() int { return c.used }
 
 type Counters map[CounterKey]*Counter
@@ -90,15 +99,15 @@ var (
 	SHA CounterKey = "SHA"
 )
 
-type CounterManager struct {
-	currentCounters    Counters
-	currentTransaction types.Transaction
-	historicalCounters []Counters
-	calls              [256]executionFunc
-	smtMaxLevel        int64
-	smtLevels          int
-	transactionStore   []types.Transaction
-}
+// type CounterManager struct {
+// 	currentCounters    Counters
+// 	currentTransaction types.Transaction
+// 	historicalCounters []Counters
+// 	calls              [256]executionFunc
+// 	smtMaxLevel        int64
+// 	smtLevels          int
+// 	transactionStore   []types.Transaction
+// }
 
 type CounterCollector struct {
 	counters    Counters
@@ -127,6 +136,21 @@ func NewCounterCollector(smtLevels int) *CounterCollector {
 	return &CounterCollector{
 		counters:  defaultCounters(),
 		smtLevels: smtLevels,
+	}
+}
+
+func (cc *CounterCollector) Clone() *CounterCollector {
+	var clonedCounters Counters = Counters{}
+
+	for k, v := range cc.counters {
+		clonedCounters[k] = v.Clone()
+	}
+
+	return &CounterCollector{
+		counters:    clonedCounters,
+		smtLevels:   cc.smtLevels,
+		isDeploy:    cc.isDeploy,
+		transaction: cc.transaction, // no need to make deep clone of a transaction
 	}
 }
 

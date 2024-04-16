@@ -33,6 +33,16 @@ func NewTransactionCounter(transaction types.Transaction, smtMaxLevel int) *Tran
 	return tc
 }
 
+func (tc *TransactionCounter) Clone() *TransactionCounter {
+	return &TransactionCounter{
+		transaction:        tc.transaction,
+		rlpCounters:        tc.rlpCounters.Clone(),
+		executionCounters:  tc.executionCounters.Clone(),
+		processingCounters: tc.processingCounters.Clone(),
+		smtLevels:          tc.smtLevels,
+	}
+}
+
 func (tc *TransactionCounter) CalculateRlp() error {
 	raw, err := tx.TransactionToL2Data(tc.transaction, 8, tx.MaxEffectivePercentage)
 	if err != nil {
