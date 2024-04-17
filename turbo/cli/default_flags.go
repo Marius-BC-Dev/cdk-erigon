@@ -203,4 +203,5 @@ var DefaultFlags = []cli.Flag{
 	&utils.DebugStep,
 	&utils.DebugStepAfter,
 	&utils.PoolManagerUrl,
+	&utils.DisableVirtualCounters,
 }

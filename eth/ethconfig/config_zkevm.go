@@ -46,7 +46,12 @@ type Zk struct {
 	DebugStep      uint64
 	DebugStepAfter uint64
 
-	PoolManagerUrl string
+	PoolManagerUrl         string
+	DisableVirtualCounters bool
 }
 
 var DefaultZkConfig = &Zk{}
+
+func (c *Zk) ShouldCountersBeUnlimited() bool {
+	return c.DisableVirtualCounters && !c.ExecutorStrictMode && len(c.ExecutorUrls) != 0
+}
