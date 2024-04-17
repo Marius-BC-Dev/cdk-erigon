@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/core/types"
+	"bytes"
 )
 
 type SequencerExecutorVerifyCfg struct {
@@ -123,10 +124,11 @@ func SpawnSequencerExecutorVerifyStage(
 			// pool, but as it knows about these limbo transactions it will place them into limbo instead
 			// of queueing them again
 			limboDetails := txpool.LimboBatchDetails{
-				Witness:          response.Witness,
-				BatchNumber:      response.BatchNumber,
-				ExecutorResponse: response.ExecutorResponse,
-				BadTransactions:  make([]common.Hash, 0),
+				Witness:               response.Witness,
+				BatchNumber:           response.BatchNumber,
+				ExecutorResponse:      response.ExecutorResponse,
+				BadTransactionsHashes: make([]common.Hash, 0),
+				BadTransactionsRLP:    make([][]byte, 0),
 			}
 
 			// now we need to figure out the highest block number in the batch
@@ -157,7 +159,14 @@ func SpawnSequencerExecutorVerifyStage(
 				}
 				for _, transaction := range block.Transactions() {
 					hash := transaction.Hash()
-					limboDetails.BadTransactions = append(limboDetails.BadTransactions, hash)
+					var b []byte
+					buffer := bytes.NewBuffer(b)
+					err = transaction.EncodeRLP(buffer)
+					if err != nil {
+						return err
+					}
+					limboDetails.BadTransactionsHashes = append(limboDetails.BadTransactionsHashes, hash)
+					limboDetails.BadTransactionsRLP = append(limboDetails.BadTransactionsRLP, buffer.Bytes())
 					log.Info(fmt.Sprintf("[%s] adding transaction to limbo", s.LogPrefix()), "hash", hash)
 				}
 			}

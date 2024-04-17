@@ -25,10 +25,11 @@ const (
 )
 
 type LimboBatchDetails struct {
-	Witness          []byte
-	BatchNumber      uint64
-	BadTransactions  []common.Hash
-	ExecutorResponse *executor.ProcessBatchResponseV2
+	Witness               []byte
+	BatchNumber           uint64
+	BadTransactionsHashes []common.Hash
+	BadTransactionsRLP    [][]byte
+	ExecutorResponse      *executor.ProcessBatchResponseV2
 }
 
 func calcProtocolBaseFee(baseFee uint64) uint64 {
@@ -247,14 +248,20 @@ func (p *TxPool) NewLimboBatchDetails(details LimboBatchDetails) {
 	p.limboBatches = append(p.limboBatches, details)
 
 	/*
-	as we know we're about to enter an unwind we need to ensure that all the transactions have been
-	handled after the unwind by the call to OnNewBlock before we can start yielding again.  There
-	is a risk that in the small window of time between this call and the next call to yield
-	by the stage loop a TX with a nonce too high will be yielded and cause an error during execution
+		as we know we're about to enter an unwind we need to ensure that all the transactions have been
+		handled after the unwind by the call to OnNewBlock before we can start yielding again.  There
+		is a risk that in the small window of time between this call and the next call to yield
+		by the stage loop a TX with a nonce too high will be yielded and cause an error during execution
 
-	potential dragons here as if the OnNewBlock is never called the call to yield will always return empty
+		potential dragons here as if the OnNewBlock is never called the call to yield will always return empty
 	*/
 	p.awaitingBlockHandling.Store(true)
+}
+
+func (p *TxPool) GetLimboDetails() []LimboBatchDetails {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	return p.limboBatches
 }
 
 // should be called from within a locked context from the pool
@@ -277,7 +284,7 @@ func (p *TxPool) trimSlotsBasedOnLimbo(slots types.TxSlots) (trimmed types.TxSlo
 // should be called from within a locked context from the pool
 func (p *TxPool) isTxKnownToLimbo(hash common.Hash) bool {
 	for _, limbo := range p.limboBatches {
-		for _, txHash := range limbo.BadTransactions {
+		for _, txHash := range limbo.BadTransactionsHashes {
 			if txHash == hash {
 				return true
 			}
