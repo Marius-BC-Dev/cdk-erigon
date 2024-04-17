@@ -20,6 +20,7 @@ import (
 // NetAPI the interface for the net_ RPC commands
 type TxPoolAPI interface {
 	Content(ctx context.Context) (interface{}, error)
+	Limbo(ctx context.Context) (interface{}, error)
 }
 
 // TxPoolAPIImpl data structure to store things needed for net_ commands
@@ -149,6 +150,60 @@ func (api *TxPoolAPIImpl) Status(ctx context.Context) (interface{}, error) {
 		"baseFee": hexutil.Uint(reply.BaseFeeCount),
 		"queued":  hexutil.Uint(reply.QueuedCount),
 	}, nil
+}
+
+func (api *TxPoolAPIImpl) Limbo(ctx context.Context) (interface{}, error) {
+	content := map[string]map[string]map[string]*RPCTransaction{
+		"limbo": make(map[string]map[string]*RPCTransaction),
+	}
+
+	limbo := make(map[libcommon.Address][]types.Transaction, 8)
+
+	reply, err := api.pool.All(ctx, &proto_txpool.AllRequest{})
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range reply.Txs {
+		stream := rlp.NewStream(bytes.NewReader(reply.Txs[i].RlpTx), 0)
+		txn, err := types.DecodeTransaction(stream)
+		if err != nil {
+			return nil, err
+		}
+		addr := gointerfaces.ConvertH160toAddress(reply.Txs[i].Sender)
+		switch reply.Txs[i].TxnType {
+		case proto_txpool.AllReply_LIMBO:
+			if _, ok := limbo[addr]; !ok {
+				limbo[addr] = make([]types.Transaction, 0, 4)
+			}
+			limbo[addr] = append(limbo[addr], txn)
+		}
+	}
+
+	tx, err := api.db.BeginRo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	cc, err := api.chainConfig(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	curHeader := rawdb.ReadCurrentHeader(tx)
+	if curHeader == nil {
+		return nil, nil
+	}
+	// Flatten the pending transactions
+	for account, txs := range limbo {
+		dump := make(map[string]*RPCTransaction)
+		for _, txn := range txs {
+			dump[fmt.Sprintf("%d", txn.GetNonce())] = newRPCPendingTransaction(txn, curHeader, cc)
+		}
+		content["limbo"][account.Hex()] = dump
+	}
+
+	return content, nil
 }
 
 /*

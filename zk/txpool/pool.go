@@ -225,6 +225,9 @@ type SubPoolType uint8
 const PendingSubPool SubPoolType = 1
 const BaseFeeSubPool SubPoolType = 2
 const QueuedSubPool SubPoolType = 3
+const LimboSubPool SubPoolType = 4
+
+const LimboSubPoolSize = 100_000 // overkill but better too large than too small
 
 func (sp SubPoolType) String() string {
 	switch sp {
@@ -304,6 +307,14 @@ type TxPool struct {
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and
 	// vice versa
 	flushMtx *sync.Mutex
+
+	// limbo specific fields where bad batch transactions identified by the executor go
+	limbo        *SubPool
+	limboBatches []LimboBatchDetails
+
+	// used to denote some process has made the pool aware that an unwind is about to occur and to wait
+	// until the unwind has been processed before allowing yielding of transactions again
+	awaitingBlockHandling atomic.Bool
 }
 
 func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, zkCfg *ethconfig.Zk, cache kvcache.Cache, chainID uint256.Int, shanghaiTime *big.Int, londonBlock *big.Int) (*TxPool, error) {
@@ -348,6 +359,8 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		shanghaiTime:            shanghaiTime,
 		allowFreeTransactions:   zkCfg.AllowFreeTransactions,
 		flushMtx:                &sync.Mutex{},
+		limbo:                   NewSubPool(LimboSubPool, LimboSubPoolSize),
+		limboBatches:            make([]LimboBatchDetails, 0),
 	}, nil
 }
 
@@ -431,14 +444,37 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 		return err
 	}
 
+	blockNum := p.lastSeenBlock.Load()
+
+	// zkevm - handle limbo transactions if we are aware of any limbo state
+	var limboTxs types.TxSlots
+	unwindTxs, limboTxs = p.trimSlotsBasedOnLimbo(unwindTxs)
+
+	if len(limboTxs.Txs) > 0 {
+		p.appendLimboTransactions(limboTxs, blockNum)
+	}
+
 	//log.Debug("[txpool] new block", "unwinded", len(unwindTxs.txs), "mined", len(minedTxs.txs), "baseFee", baseFee, "blockHeight", blockHeight)
 
-	announcements, err := addTxsOnNewBlock(p.lastSeenBlock.Load(), cacheView, stateChanges, p.senders, unwindTxs,
-		pendingBaseFee, stateChanges.BlockGasLimit,
-		p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked)
+	announcements, err := addTxsOnNewBlock(
+		blockNum,
+		cacheView,
+		stateChanges,
+		p.senders,
+		unwindTxs,
+		pendingBaseFee,
+		stateChanges.BlockGasLimit,
+		p.pending,
+		p.baseFee,
+		p.queued,
+		p.all,
+		p.byHash,
+		p.addLocked,
+		p.discardLocked)
 	if err != nil {
 		return err
 	}
+
 	p.pending.EnforceWorstInvariants()
 	p.baseFee.EnforceInvariants()
 	p.queued.EnforceInvariants()
@@ -457,6 +493,9 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 		default:
 		}
 	}
+
+	// always store false here as we've finally handled the new block
+	p.awaitingBlockHandling.Store(false)
 
 	//log.Info("[txpool] new block", "number", p.lastSeenBlock.Load(), "pendngBaseFee", pendingBaseFee, "in", time.Since(t))
 	return nil

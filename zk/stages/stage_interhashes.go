@@ -39,6 +39,7 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/trie"
 	"github.com/ledgerwatch/erigon/zk"
 	"github.com/status-im/keycard-go/hexutils"
+	"github.com/ledgerwatch/erigon/core/rawdb"
 	"os"
 )
 
@@ -164,7 +165,7 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 		}
 		expectedRootHash = syncHeadHeader.Root
 		headerHash = syncHeadHeader.Hash()
-		if root, err = zkIncrementIntermediateHashes(logPrefix, s, tx, eridb, smt, incrementTo, cfg.checkRoot, &expectedRootHash, quit); err != nil {
+		if root, err = zkIncrementIntermediateHashes(logPrefix, s, tx, eridb, smt, incrementTo, cfg.checkRoot, expectedRootHash, quit); err != nil {
 			return trie.EmptyRoot, err
 		}
 	}
@@ -182,7 +183,12 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 			return trie.EmptyRoot, fmt.Errorf("wrong trie root")
 		}
 		if cfg.hd != nil {
-			cfg.hd.ReportBadHeaderPoS(headerHash, syncHeadHeader.ParentHash)
+			if syncHeadHeader != nil {
+				cfg.hd.ReportBadHeaderPoS(headerHash, syncHeadHeader.ParentHash)
+			} else {
+				log.Error(fmt.Sprintf("[%s] sync head header was nil, reporting empty hash as bad header", logPrefix))
+				cfg.hd.ReportBadHeaderPoS(headerHash, common.Hash{})
+			}
 		}
 		// if to > s.BlockNumber {
 		//unwindTo := (to + s.BlockNumber) / 2 // Binary search for the correct block, biased to the lower numbers
@@ -220,9 +226,8 @@ func UnwindZkIntermediateHashesStage(u *stagedsync.UnwindState, s *stagedsync.St
 	if syncHeadHeader == nil {
 		return fmt.Errorf("header not found for block number %d", u.UnwindPoint)
 	}
-	expectedRootHash := syncHeadHeader.Root
 
-	root, err := unwindZkSMT(s.LogPrefix(), s.BlockNumber, u.UnwindPoint, tx, false, &expectedRootHash, quit)
+	root, err := unwindZkSMT(s.LogPrefix(), s.BlockNumber, u.UnwindPoint, tx, false, syncHeadHeader, quit)
 	if err != nil {
 		return err
 	}
@@ -341,7 +346,7 @@ func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb
 	return libcommon.BigToHash(root), nil
 }
 
-func zkIncrementIntermediateHashes(logPrefix string, s *stagedsync.StageState, db kv.RwTx, eridb *db2.EriDb, dbSmt *smt.SMT, to uint64, checkRoot bool, expectedRootHash *libcommon.Hash, quit <-chan struct{}) (libcommon.Hash, error) {
+func zkIncrementIntermediateHashes(logPrefix string, s *stagedsync.StageState, db kv.RwTx, eridb *db2.EriDb, dbSmt *smt.SMT, to uint64, checkRoot bool, expectedRootHash libcommon.Hash, quit <-chan struct{}) (libcommon.Hash, error) {
 	log.Info(fmt.Sprintf("[%s] Increment trie hashes started", logPrefix), "previousRootHeight", s.BlockNumber, "calculatingRootHeight", to)
 	defer log.Info(fmt.Sprintf("[%s] Increment ended", logPrefix))
 
@@ -462,9 +467,14 @@ func zkIncrementIntermediateHashes(logPrefix string, s *stagedsync.StageState, d
 	return hash, nil
 }
 
-func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, expectedRootHash *libcommon.Hash, quit <-chan struct{}) (libcommon.Hash, error) {
+func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, syncHeadHeader *types.Header, quit <-chan struct{}) (libcommon.Hash, error) {
 	log.Info(fmt.Sprintf("[%s] Unwind trie hashes started", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Unwind ended", logPrefix))
+
+	// ensure we update the head header hash as in the zk world this is handled in the inters stage
+	if err := rawdb.WriteHeadHeaderHash(db, syncHeadHeader.Hash()); err != nil {
+		return common.Hash{}, err
+	}
 
 	eridb := db2.NewEriDb(db)
 	dbSmt := smt.NewSMT(eridb)
@@ -608,7 +618,7 @@ func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, 
 		}
 	}
 
-	if err := verifyLastHash(dbSmt, expectedRootHash, checkRoot, logPrefix); err != nil {
+	if err := verifyLastHash(dbSmt, syncHeadHeader.Hash(), checkRoot, logPrefix); err != nil {
 		log.Error("failed to verify hash")
 		eridb.RollbackBatch()
 		return trie.EmptyRoot, err
@@ -621,13 +631,14 @@ func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, 
 	lr := dbSmt.LastRoot()
 
 	hash := libcommon.BigToHash(lr)
+
 	return hash, nil
 }
 
-func verifyLastHash(dbSmt *smt.SMT, expectedRootHash *libcommon.Hash, checkRoot bool, logPrefix string) error {
+func verifyLastHash(dbSmt *smt.SMT, expectedRootHash libcommon.Hash, checkRoot bool, logPrefix string) error {
 	hash := libcommon.BigToHash(dbSmt.LastRoot())
 
-	if checkRoot && hash != *expectedRootHash {
+	if checkRoot && hash != expectedRootHash {
 		log.Warn(fmt.Sprintf("[%s] Wrong trie root: %x, expected (from header): %x", logPrefix, hash, expectedRootHash))
 		return nil
 	}

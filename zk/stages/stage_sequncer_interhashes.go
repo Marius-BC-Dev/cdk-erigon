@@ -14,20 +14,24 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/shards"
 	"github.com/ledgerwatch/erigon/zk/erigon_db"
 	rawdbZk "github.com/ledgerwatch/erigon/zk/rawdb"
+	"github.com/ledgerwatch/erigon/turbo/services"
 )
 
 type SequencerInterhashesCfg struct {
 	db          kv.RwDB
 	accumulator *shards.Accumulator
+	blockReader services.FullBlockReader
 }
 
 func StageSequencerInterhashesCfg(
 	db kv.RwDB,
 	accumulator *shards.Accumulator,
+	blockReader services.FullBlockReader,
 ) SequencerInterhashesCfg {
 	return SequencerInterhashesCfg{
 		db:          db,
 		accumulator: accumulator,
+		blockReader: blockReader,
 	}
 }
 
@@ -69,7 +73,7 @@ func SpawnSequencerInterhashesStage(
 	} else {
 		// todo [zkevm] we need to be prepared for multi-block batches at some point so this should really be a loop with a from/to
 		// of the previous stage state and the latest block from execution stage
-		newRoot, err = zkIncrementIntermediateHashes(s.LogPrefix(), s, tx, eridb, smt, to, false, nil, ctx.Done())
+		newRoot, err = zkIncrementIntermediateHashes(s.LogPrefix(), s, tx, eridb, smt, to, false, libcommon.Hash{}, ctx.Done())
 		if err != nil {
 			return err
 		}
@@ -165,7 +169,41 @@ func UnwindSequencerInterhashsStage(
 	ctx context.Context,
 	cfg SequencerInterhashesCfg,
 	initialCycle bool,
-) error {
+) (err error) {
+	quit := ctx.Done()
+	useExternalTx := tx != nil
+	if !useExternalTx {
+		tx, err = cfg.db.BeginRw(ctx)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+	}
+
+	unwindPoint := u.UnwindPoint
+
+	syncHeadHeader, err := cfg.blockReader.HeaderByNumber(ctx, tx, unwindPoint)
+	if err != nil {
+		return err
+	}
+	if syncHeadHeader == nil {
+		return fmt.Errorf("header not found for block number %d", unwindPoint)
+	}
+
+	root, err := unwindZkSMT(s.LogPrefix(), s.BlockNumber, unwindPoint, tx, false, syncHeadHeader, quit)
+	if err != nil {
+		return err
+	}
+	_ = root
+
+	if err := u.Done(tx); err != nil {
+		return err
+	}
+	if !useExternalTx {
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

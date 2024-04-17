@@ -17,6 +17,7 @@ import (
 	"github.com/ledgerwatch/erigon/zk/legacy_executor_verifier/proto/github.com/0xPolygonHermez/zkevm-node/state/runtime/executor"
 	"github.com/ledgerwatch/erigon/zk/syncer"
 	"github.com/ledgerwatch/log/v3"
+	"errors"
 )
 
 const (
@@ -33,13 +34,15 @@ type VerifierRequest struct {
 }
 
 type VerifierResponse struct {
-	BatchNumber uint64
-	Valid       bool
-	Witness     []byte
+	BatchNumber      uint64
+	Valid            bool
+	Witness          []byte
+	ExecutorResponse *executor.ProcessBatchResponseV2
+	Error            error
 }
 
 type ILegacyExecutor interface {
-	Verify(*Payload, *VerifierRequest, common.Hash) (bool, error)
+	Verify(*Payload, *VerifierRequest, common.Hash) (bool, *executor.ProcessBatchResponseV2, error)
 }
 
 type WitnessGenerator interface {
@@ -214,17 +217,24 @@ func (v *LegacyExecutorVerifier) handleRequest(ctx context.Context, request *Ver
 
 	previousBlock, _ := rawdb.ReadBlockByNumber(tx, blocks[0]-1)
 
-	ok, err := execer.Verify(payload, request, previousBlock.Root())
+	ok, executorResponse, err := execer.Verify(payload, request, previousBlock.Root())
 	if err != nil {
-		return err
+		if errors.Is(err, ErrExecutorStateRootMismatch) {
+			log.Error("[Verifier] State root mismatch detected", "err", err)
+		} else if errors.Is(err, ErrExecutorUnknownError) {
+			log.Error("[Verifier] Unexpected error found from executor", "err", err)
+		} else {
+			return err
+		}
 	}
 
-	response := &VerifierResponse{
-		BatchNumber: request.BatchNumber,
-		Valid:       ok,
-		Witness:     witness,
+	v.responseChan <- &VerifierResponse{
+		BatchNumber:      request.BatchNumber,
+		Valid:            ok,
+		Witness:          witness,
+		ExecutorResponse: executorResponse,
+		Error:            err,
 	}
-	v.responseChan <- response
 
 	return nil
 }

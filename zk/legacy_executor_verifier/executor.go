@@ -10,6 +10,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"time"
+	"errors"
+)
+
+var (
+	ErrExecutorStateRootMismatch = errors.New("executor state root mismatches")
+	ErrExecutorUnknownError      = errors.New("unknown error from executor")
 )
 
 type Config struct {
@@ -86,7 +92,7 @@ func (e *Executor) Close() {
 	}
 }
 
-func (e *Executor) Verify(p *Payload, request *VerifierRequest, oldStateRoot common.Hash) (bool, error) {
+func (e *Executor) Verify(p *Payload, request *VerifierRequest, oldStateRoot common.Hash) (bool, *executor.ProcessBatchResponseV2, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -111,7 +117,7 @@ func (e *Executor) Verify(p *Payload, request *VerifierRequest, oldStateRoot com
 		//},
 	}, grpc.MaxCallSendMsgSize(size), grpc.MaxCallRecvMsgSize(size))
 	if err != nil {
-		return false, fmt.Errorf("failed to process stateless batch: %w", err)
+		return false, nil, fmt.Errorf("failed to process stateless batch: %w", err)
 	}
 
 	counters := map[string]int{
@@ -137,17 +143,22 @@ func (e *Executor) Verify(p *Payload, request *VerifierRequest, oldStateRoot com
 
 	log.Debug("Received response from executor", "grpcUrl", e.grpcUrl, "response", resp)
 
+	// DO NOT MERGE !! forcing failure
+	if request.BatchNumber%3 == 0 {
+		return false, resp, err
+	}
+
 	return responseCheck(resp, request.StateRoot)
 }
 
-func responseCheck(resp *executor.ProcessBatchResponseV2, erigonStateRoot common.Hash) (bool, error) {
+func responseCheck(resp *executor.ProcessBatchResponseV2, erigonStateRoot common.Hash) (bool, *executor.ProcessBatchResponseV2, error) {
 	if resp == nil {
-		return false, fmt.Errorf("nil response")
+		return false, nil, fmt.Errorf("nil response")
 	}
 
 	if resp.Debug != nil && resp.Debug.ErrorLog != "" {
 		log.Error("executor error", "detail", resp.Debug.ErrorLog)
-		return false, fmt.Errorf("error in response: %s", resp.Debug.ErrorLog)
+		return false, resp, fmt.Errorf("error in response: %s", resp.Debug.ErrorLog)
 	}
 
 	if resp.Error != executor.ExecutorError_EXECUTOR_ERROR_UNSPECIFIED &&
@@ -155,15 +166,15 @@ func responseCheck(resp *executor.ProcessBatchResponseV2, erigonStateRoot common
 		// prover id here is the only string field in the response and will contain info on what key failed from
 		// the provided witness
 		log.Error("executor error", "detail", resp.ProverId)
-		return false, fmt.Errorf("error in response: %s", resp.Error)
+		return false, resp, fmt.Errorf("%w: error in response: %s", ErrExecutorUnknownError, resp.Error)
 
 	}
 
 	if !bytes.Equal(resp.NewStateRoot, erigonStateRoot.Bytes()) {
-		return false, fmt.Errorf("erigon state root mismatch: expected %s, got %s", erigonStateRoot, common.BytesToHash(resp.NewStateRoot))
+		return false, resp, fmt.Errorf("%w: expected %s, got %s", ErrExecutorStateRootMismatch, erigonStateRoot, common.BytesToHash(resp.NewStateRoot))
 	}
 
-	return true, nil
+	return true, resp, nil
 }
 
 func counterUndershootCheck(respCounters, counters map[string]int, batchNo uint64) {

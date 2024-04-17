@@ -318,7 +318,13 @@ LOOP:
 
 				receipt, overflow, err = attemptAddTransaction(tx, cfg, batchCounters, header, parentBlock.Header(), transaction, ibs, hermezDb, smt, effectiveGas)
 				if err != nil {
-					return err
+					// log the error and move on.  Whilst working through limbo it became apparent that an error during execution here
+					// could cause the unwind events from the accumulator to not be played out causing the txpool to never
+					// deal with transactions that should now be in limbo and leave us in a bad state.
+					// A bad actor who is spamming transactions in here would cause a nonce error and spanner the unwind being
+					// handled properly
+					log.Error(fmt.Sprintf("[%s] error attempting to add transction to block", logPrefix), "err", err)
+					continue
 				}
 				if overflow {
 					log.Info(fmt.Sprintf("[%s] overflowed adding transaction to batch", logPrefix), "batch", thisBatch, "tx-hash", transaction.Hash())
@@ -940,6 +946,13 @@ func UnwindSequenceExecutionStage(u *stagedsync.UnwindState, s *stagedsync.Stage
 	if err = unwindExecutionStage(u, s, tx, ctx, cfg, initialCycle); err != nil {
 		return err
 	}
+
+	// now lean on the batches stage as this touches the same tables as our sequencer execution
+	batchCfg := BatchesCfg{db: cfg.db}
+	if err = UnwindBatchesStage(u, tx, batchCfg, ctx); err != nil {
+		return err
+	}
+
 	if err = u.Done(tx); err != nil {
 		return err
 	}
@@ -1081,6 +1094,10 @@ func unwindExecutionStage(u *stagedsync.UnwindState, s *stagedsync.StageState, t
 		if err != nil {
 			return err
 		}
+	}
+
+	if err = stages.SaveStageProgress(tx, stages.Headers, u.UnwindPoint); err != nil {
+		return err
 	}
 
 	return nil
