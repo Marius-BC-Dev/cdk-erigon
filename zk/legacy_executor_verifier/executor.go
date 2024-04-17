@@ -143,11 +143,6 @@ func (e *Executor) Verify(p *Payload, request *VerifierRequest, oldStateRoot com
 
 	log.Debug("Received response from executor", "grpcUrl", e.grpcUrl, "response", resp)
 
-	// DO NOT MERGE !! forcing failure
-	if request.BatchNumber%3 == 0 {
-		return false, resp, err
-	}
-
 	return responseCheck(resp, request.StateRoot)
 }
 
