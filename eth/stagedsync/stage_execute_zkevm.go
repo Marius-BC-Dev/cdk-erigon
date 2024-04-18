@@ -18,6 +18,8 @@ import (
 
 	"math/big"
 
+	"os"
+
 	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/core/rawdb"
@@ -42,6 +44,18 @@ func SpawnExecuteBlocksStageZk(s *StageState, u Unwinder, tx kv.RwTx, toBlock ui
 		return nil
 	}
 
+	///// DEBUG BISECT /////
+	highestBlockExecuted := s.BlockNumber
+	defer func() {
+		if cfg.zk.DebugLimit > 0 {
+			if err != nil {
+				log.Error("Execution Failed", "err", err, "block", highestBlockExecuted)
+				os.Exit(2)
+			}
+		}
+	}()
+	///// DEBUG BISECT /////
+
 	quit := ctx.Done()
 	useExternalTx := tx != nil
 	if !useExternalTx {
@@ -52,12 +66,10 @@ func SpawnExecuteBlocksStageZk(s *StageState, u Unwinder, tx kv.RwTx, toBlock ui
 		defer tx.Rollback()
 	}
 
-	shouldShortCircuit, noProgressTo, err := utils.ShouldShortCircuitExecution(tx)
+	logPrefix := s.LogPrefix()
+	shouldShortCircuit, noProgressTo, err := utils.ShouldShortCircuitExecution(tx, logPrefix)
 	if err != nil {
 		return err
-	}
-	if shouldShortCircuit {
-		return nil
 	}
 
 	prevStageProgress, errStart := stages.GetStageProgress(tx, stages.Senders)
@@ -70,7 +82,6 @@ func SpawnExecuteBlocksStageZk(s *StageState, u Unwinder, tx kv.RwTx, toBlock ui
 	}
 	nextStagesExpectData := nextStageProgress > 0 // Incremental move of next stages depend on fully written ChangeSets, Receipts, CallTraceSet
 
-	logPrefix := s.LogPrefix()
 	var to = prevStageProgress
 	if toBlock > 0 {
 		to = cmp.Min(prevStageProgress, toBlock)
@@ -105,21 +116,6 @@ func SpawnExecuteBlocksStageZk(s *StageState, u Unwinder, tx kv.RwTx, toBlock ui
 		batch.Rollback()
 	}()
 
-	if s.BlockNumber == 0 {
-		to = noProgressTo
-	}
-
-	// limit execution to 100 blocks at a time for faster sync near tip
-	// [TODO] remove it after Interhashes  incremental is optimized
-	total := to - stageProgress
-	if total > cfg.zk.RebuildTreeAfter && total < 100000 {
-		to = stageProgress + cfg.zk.RebuildTreeAfter
-		total = cfg.zk.RebuildTreeAfter
-	}
-	if !quiet && to > s.BlockNumber+16 {
-		log.Info(fmt.Sprintf("[%s] Blocks execution", logPrefix), "from", s.BlockNumber, "to", to)
-	}
-
 	initialBlock := stageProgress + 1
 	eridb := erigon_db.NewErigonDb(tx)
 
@@ -138,8 +134,29 @@ func SpawnExecuteBlocksStageZk(s *StageState, u Unwinder, tx kv.RwTx, toBlock ui
 
 	prevBlockRoot := header.Root
 	prevBlockHash := prevheaderHash
+
+	if shouldShortCircuit {
+		to = noProgressTo
+	}
+
+	// if debug limit set, use it
+	if cfg.zk.DebugLimit > 0 {
+		if !quiet {
+			log.Info(fmt.Sprintf("[%s] Debug limit set, switching to it", logPrefix), "regularTo", to, "debugTo", cfg.zk.DebugLimit)
+		}
+		to = cfg.zk.DebugLimit
+	}
+
+	total := to - initialBlock
+
+	if !quiet {
+		log.Info(fmt.Sprintf("[%s] Blocks execution", logPrefix), "from", s.BlockNumber, "to", to)
+	}
 Loop:
 	for blockNum := stageProgress + 1; blockNum <= to; blockNum++ {
+		if cfg.zk.SyncLimit > 0 && blockNum > cfg.zk.SyncLimit {
+			break
+		}
 		stageProgress = blockNum
 
 		if stoppedErr = common.Stopped(quit); stoppedErr != nil {
@@ -259,7 +276,8 @@ Loop:
 	if !quiet {
 		log.Info(fmt.Sprintf("[%s] Completed on", logPrefix), "block", stageProgress)
 	}
-	return stoppedErr
+	err = stoppedErr
+	return err
 }
 
 func getPreexecuteValues(cfg ExecuteBlockCfg, ctx context.Context, tx kv.RwTx, blockNum uint64) (common.Hash, *types.Block, *types.Header, []common.Address, error) {

@@ -7,7 +7,8 @@ const (
 	HermezESTestChainName            = "hermez-estest"
 	HermezCardonaChainName           = "hermez-cardona"
 	HermezBaliChainName              = "hermez-bali"
-	X1TestnetChainName               = "x1-testnet"
+	XLayerTestnetChainName           = "xlayer-testnet"
+	XLayerMainnetChainName           = "xlayer-mainnet"
 	HermezEtrogChainName             = "hermez-etrog"
 
 	LomuzPrivateTestChainChainName       = "lumoz-private-chain"
@@ -25,5 +26,6 @@ var Zkevm = []string{
 	HermezEtrogChainName,
 	HermezCardonaChainName,
 	HermezBaliChainName,
-	X1TestnetChainName,
+	XLayerTestnetChainName,
+	XLayerMainnetChainName,
 }
