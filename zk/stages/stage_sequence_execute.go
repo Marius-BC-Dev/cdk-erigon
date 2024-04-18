@@ -66,9 +66,6 @@ const (
 )
 
 var (
-	// todo: seq: this should be read in from somewhere rather than hard coded!
-	constMiner = common.HexToAddress("0xfa3b44587990f97ba8b6ba7e230a5f0e95d14b3d")
-
 	noop            = state.NewNoopWriter()
 	blockDifficulty = new(big.Int).SetUint64(0)
 )
@@ -222,7 +219,7 @@ func SpawnSequencingStage(
 
 	header := &types.Header{
 		ParentHash: parentBlock.Hash(),
-		Coinbase:   constMiner,
+		Coinbase:   cfg.zk.AddressSequencer,
 		Difficulty: blockDifficulty,
 		Number:     new(big.Int).SetUint64(nextBlockNum),
 		GasLimit:   getGasLimit(uint16(forkId)),
@@ -265,6 +262,13 @@ func SpawnSequencingStage(
 		return err
 	}
 
+	l1Recovery := cfg.zk.L1SyncStartBlock > 0
+
+	parentRoot := parentBlock.Root()
+	if err = handleStateForNewBlockStarting(cfg.chainConfig, nextBlockNum, newBlockTimestamp, &parentRoot, l1TreeUpdate, ibs, hermezDb); err != nil {
+		return err
+	}
+
 	// start waiting for a new transaction to arrive
 	ticker := time.NewTicker(10 * time.Second)
 	log.Info(fmt.Sprintf("[%s] Waiting for txs from the pool...", logPrefix))
@@ -272,6 +276,7 @@ func SpawnSequencingStage(
 	var addedReceipts []*types.Receipt
 	yielded := mapset.NewSet[[32]byte]()
 	lastTxTime := time.Now()
+	overflow := false
 
 	// start to wait for transactions to come in from the pool and attempt to add them to the current batch.  Once we detect a counter
 	// overflow we revert the IBS back to the previous snapshot and don't add the transaction/receipt to the collection that will
@@ -282,23 +287,41 @@ LOOP:
 		case <-ticker.C:
 			log.Info(fmt.Sprintf("[%s] Waiting some more for txs from the pool...", logPrefix))
 		default:
-			cfg.txPool.LockFlusher()
-			transactions, err := getNextTransactions(cfg, executionAt, forkId, yielded)
-			if err != nil {
-				return err
-			}
-			cfg.txPool.UnlockFlusher()
-
-			for _, transaction := range transactions {
-				snap := ibs.Snapshot()
-				receipt, overflow, err := attemptAddTransaction(tx, cfg, batchCounters, header, parentBlock.Header(), transaction, ibs, hermezDb, smt)
+			var transactions []types.Transaction
+			var effectiveGases []uint8
+			workRemaining := true
+			if l1Recovery {
+				transactions, effectiveGases, workRemaining, err = getNextL1BatchTransactions(thisBatch, forkId, hermezDb)
+			} else {
+				cfg.txPool.LockFlusher()
+				transactions, err = getNextPoolTransactions(cfg, executionAt, forkId, yielded)
 				if err != nil {
-					ibs.RevertToSnapshot(snap)
+					return err
+				}
+				cfg.txPool.UnlockFlusher()
+			}
+
+			for _, t := range transactions {
+				txHash := t.Hash().String()
+				_ = txHash
+			}
+
+			for idx, transaction := range transactions {
+				var receipt *types.Receipt
+
+				var effectiveGas uint8
+				if l1Recovery {
+					effectiveGas = effectiveGases[idx]
+				} else {
+					effectiveGas = DeriveEffectiveGasPrice(cfg, transaction)
+				}
+
+				receipt, overflow, err = attemptAddTransaction(tx, cfg, batchCounters, header, parentBlock.Header(), transaction, ibs, hermezDb, smt, effectiveGas)
+				if err != nil {
 					return err
 				}
 				if overflow {
-					ibs.RevertToSnapshot(snap)
-					log.Debug(fmt.Sprintf("[%s] overflowed adding transaction to batch", logPrefix), "tx-hash", transaction.Hash())
+					log.Info(fmt.Sprintf("[%s] overflowed adding transaction to batch", logPrefix), "batch", thisBatch, "tx-hash", transaction.Hash())
 					break LOOP
 				}
 
@@ -306,9 +329,21 @@ LOOP:
 				addedReceipts = append(addedReceipts, receipt)
 			}
 
+			if l1Recovery {
+				// just go into the normal loop waiting for new transactions to signal that the recovery
+				// has finished as far as it can go
+				if len(transactions) == 0 && !workRemaining {
+					continue
+				}
+
+				// if we had transactions then break the loop because we don't need to wait for more
+				// because we got them from the DB
+				break LOOP
+			}
+
 			// if there were no transactions in this check, and we have some transactions to process, and we've waited long enough for
 			// more to arrive then close the batch
-			sinceLastTx := time.Now().Sub(lastTxTime)
+			sinceLastTx := time.Since(lastTxTime)
 			if len(transactions) > 0 {
 				lastTxTime = time.Now()
 			} else if len(addedTransactions) > 0 && sinceLastTx > 250*time.Millisecond {
@@ -318,22 +353,52 @@ LOOP:
 		}
 	}
 
+	// todo: can we handle this scenario without needing to re-process the transactions?  We're doing this currently because the IBS can't be reverted once a tx has been
+	// finalised within it - it causes a panic
+	if overflow {
+		// we know now that we have a list of good transactions, so we need to get a fresh intra block state and re-run the known good ones
+		// before continuing on
+		batchCounters.ClearTransactionCounters()
+		ibs = state.New(stateReader)
+
+		header = &types.Header{
+			ParentHash: parentBlock.Hash(),
+			Coinbase:   cfg.zk.AddressSequencer,
+			Difficulty: blockDifficulty,
+			Number:     new(big.Int).SetUint64(nextBlockNum),
+			GasLimit:   getGasLimit(uint16(forkId)),
+			Time:       newBlockTimestamp,
+		}
+
+		for idx, transaction := range addedTransactions {
+			effectiveGas := DeriveEffectiveGasPrice(cfg, transaction)
+			receipt, innerOverflow, err := attemptAddTransaction(tx, cfg, batchCounters, header, parentBlock.Header(), transaction, ibs, hermezDb, smt, effectiveGas)
+			if err != nil {
+				return err
+			}
+			if innerOverflow {
+				// kill the node at this stage to prevent a batch being created that can't be proven
+				panic("overflowed twice during execution")
+			}
+			addedReceipts[idx] = receipt
+		}
+	}
+
 	counters, err := batchCounters.CombineCollectors()
 	if err != nil {
 		return err
 	}
 	log.Info("counters consumed", "counts", counters.UsedAsString())
+	err = hermezDb.WriteBatchCounters(thisBatch, counters.UsedAsMap())
+	if err != nil {
+		return err
+	}
 
 	l1BlockHash := common.Hash{}
 	ger := common.Hash{}
 	if l1TreeUpdate != nil {
 		l1BlockHash = l1TreeUpdate.ParentHash
 		ger = l1TreeUpdate.GER
-	}
-
-	parentRoot := parentBlock.Root()
-	if err = handleStateForNewBlockStarting(cfg.chainConfig, nextBlockNum, newBlockTimestamp, &parentRoot, l1TreeUpdate, ibs, hermezDb); err != nil {
-		return err
 	}
 
 	if err = finaliseBlock(cfg, tx, hermezDb, ibs, stateReader, header, parentBlock, addedTransactions, addedReceipts, thisBatch, ger, l1BlockHash, forkId); err != nil {
@@ -353,7 +418,7 @@ LOOP:
 	return nil
 }
 
-func getNextTransactions(cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, error) {
+func getNextPoolTransactions(cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, error) {
 	var transactions []types.Transaction
 	var err error
 	var count int
@@ -391,6 +456,36 @@ LOOP:
 	}
 
 	return transactions, err
+}
+
+func getNextL1BatchTransactions(batchNumber uint64, forkId uint64, hermezDb *hermez_db.HermezDb) ([]types.Transaction, []uint8, bool, error) {
+	// we expect that the batch we're going to load in next should be in the db already because of the l1 block sync
+	// stage, if it is not there we need to panic as we're in a bad state
+	batchL2Data, err := hermezDb.GetL1BatchData(batchNumber)
+	if err != nil {
+		return nil, nil, true, err
+	}
+	if len(batchL2Data) == 0 {
+		// end of the line for batch recovery so return empty
+		return []types.Transaction{}, []uint8{}, true, nil
+	}
+
+	transactions, _, effectiveGases, err := tx.DecodeTxs(batchL2Data, forkId)
+
+	isWorkRemaining := true
+	if len(transactions) == 0 {
+		// we need to check if this batch should simply be empty or not so we need to check against the
+		// highest known batch number to see if we have work to do still
+		highestKnown, err := hermezDb.GetLastL1BatchData()
+		if err != nil {
+			return nil, nil, true, err
+		}
+		if batchNumber >= highestKnown {
+			isWorkRemaining = false
+		}
+	}
+
+	return transactions, effectiveGases, isWorkRemaining, err
 }
 
 const (
@@ -492,9 +587,9 @@ func postBlockStateHandling(
 			return err
 		}
 
-		// todo: how to set the effective gas percentage as a the sequencer
 		// TODO: calculate l2 tx hash
-		_, err = infoTree.SetBlockTx(&l2TxHash, i, receipt, logIndex, receipt.CumulativeGasUsed, zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_MAXIMUM)
+		effectiveGasPrice := DeriveEffectiveGasPrice(cfg, t)
+		_, err = infoTree.SetBlockTx(&l2TxHash, i, receipt, logIndex, receipt.CumulativeGasUsed, effectiveGasPrice)
 		if err != nil {
 			return err
 		}
@@ -535,7 +630,8 @@ func handleInjectedBatch(
 	batchCounters := vm.NewBatchCounterCollector(smt.GetDepth()-1, uint16(forkId))
 
 	// process the tx and we can ignore the counters as an overflow at this stage means no network anyway
-	receipt, _, err := attemptAddTransaction(dbTx, cfg, batchCounters, header, parentBlock.Header(), txs[0], ibs, hermezDb, smt)
+	effectiveGas := DeriveEffectiveGasPrice(cfg, txs[0])
+	receipt, _, err := attemptAddTransaction(dbTx, cfg, batchCounters, header, parentBlock.Header(), txs[0], ibs, hermezDb, smt, effectiveGas)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -594,7 +690,7 @@ func finaliseBlock(
 	}
 
 	finalHeader := finalBlock.Header()
-	finalHeader.Coinbase = constMiner
+	finalHeader.Coinbase = cfg.zk.AddressSequencer
 	finalHeader.GasLimit = getGasLimit(uint16(forkId))
 	finalHeader.ReceiptHash = types.DeriveSha(receipts)
 	newNum := finalBlock.Number()
@@ -720,8 +816,9 @@ func attemptAddTransaction(
 	ibs *state.IntraBlockState,
 	hermezDb *hermez_db.HermezDb,
 	smt *smt.SMT,
+	effectiveGasPrice uint8,
 ) (*types.Receipt, bool, error) {
-	txCounters := vm.NewTransactionCounter(transaction, smt.GetDepth()-1)
+	txCounters := vm.NewTransactionCounter(transaction, smt.GetDepth()-1, cfg.zk.ShouldCountersBeUnlimited())
 	overflow, err := batchCounters.AddNewTransactionCounters(txCounters)
 	if err != nil {
 		return nil, false, err
@@ -744,7 +841,7 @@ func attemptAddTransaction(
 		cfg.chainConfig,
 		core.GetHashFn(header, getHeader),
 		cfg.engine,
-		&constMiner,
+		&cfg.zk.AddressSequencer,
 		gasPool,
 		ibs,
 		noop,
@@ -753,7 +850,7 @@ func attemptAddTransaction(
 		&header.GasUsed,
 		*cfg.zkVmConfig,
 		parentHeader.ExcessDataGas,
-		zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_MAXIMUM)
+		effectiveGasPrice)
 
 	if err != nil {
 		return nil, false, err
@@ -761,7 +858,7 @@ func attemptAddTransaction(
 
 	// we need to keep hold of the effective percentage used
 	// todo [zkevm] for now we're hard coding to the max value but we need to calc this properly
-	if err = hermezDb.WriteEffectiveGasPricePercentage(transaction.Hash(), zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_MAXIMUM); err != nil {
+	if err = hermezDb.WriteEffectiveGasPricePercentage(transaction.Hash(), effectiveGasPrice); err != nil {
 		return nil, false, err
 	}
 

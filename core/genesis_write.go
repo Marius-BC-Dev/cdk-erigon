@@ -673,6 +673,10 @@ func GenesisBlockByChainName(chain string) *types.Genesis {
 		return HermezCardonaGenesisBlock()
 	case networkname.HermezBaliChainName:
 		return HermezCardonaInternalGenesisBlock()
+	case networkname.XLayerTestnetChainName:
+		return XLayerTestnetGenesisBlock()
+	case networkname.XLayerMainnetChainName:
+		return XLayerMainnetGenesisBlock()
 	case networkname.LomuzPrivateTestChainLayer2ChainName:
 		return LomuzPrivateChainLayer2GenesisBlock()
 	case networkname.MerlinV2TestnetChainName:
@@ -680,6 +684,6 @@ func GenesisBlockByChainName(chain string) *types.Genesis {
 	case networkname.ZkevmFork58ChainName:
 		return ZkevmFork58GenesisBlock()
 	default:
-		return nil
+		return DynamicGenesisBlock(chain)
 	}
 }

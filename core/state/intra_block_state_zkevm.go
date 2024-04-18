@@ -3,9 +3,9 @@ package state
 import (
 	"errors"
 
+	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	"github.com/iden3/go-iden3-crypto/keccak256"
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/core/types"
@@ -20,6 +20,7 @@ var (
 	ADDRESS_SCALABLE_L2          = libcommon.HexToAddress("0x000000000000000000000000000000005ca1ab1e")
 	GER_MANAGER_ADDRESS          = libcommon.HexToAddress("0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA")
 	GLOBAL_EXIT_ROOT_STORAGE_POS = libcommon.HexToHash("0x0")
+	GLOBAL_EXIT_ROOT_POS_1       = libcommon.HexToHash("0x1")
 )
 
 type ReadOnlyHermezDb interface {
@@ -114,10 +115,16 @@ func (sdb *IntraBlockState) scalableSetBlockInfoRoot(l1InfoRoot *libcommon.Hash)
 	l1InfoRootBigU := uint256.NewInt(0).SetBytes(l1InfoRoot.Bytes())
 
 	sdb.SetState(ADDRESS_SCALABLE_L2, &BLOCK_INFO_ROOT_STORAGE_POS, *l1InfoRootBigU)
-
 }
+
 func (sdb *IntraBlockState) scalableSetBlockNum(blockNum uint64) {
 	sdb.SetState(ADDRESS_SCALABLE_L2, &LAST_BLOCK_STORAGE_POS, *uint256.NewInt(blockNum))
+}
+
+func (sbd *IntraBlockState) GetBlockNumber() *uint256.Int {
+	blockNum := uint256.NewInt(0)
+	sbd.GetState(ADDRESS_SCALABLE_L2, &LAST_BLOCK_STORAGE_POS, blockNum)
+	return blockNum
 }
 
 func (sdb *IntraBlockState) ScalableSetTimestamp(timestamp uint64) {
@@ -134,6 +141,16 @@ func (sdb *IntraBlockState) scalableSetBlockHash(blockNum uint64, blockHash *lib
 	hashAsBigU := uint256.NewInt(0).SetBytes(blockHash.Bytes())
 
 	sdb.SetState(ADDRESS_SCALABLE_L2, &mkh, *hashAsBigU)
+}
+
+func (sdb *IntraBlockState) GetBlockStateRoot(blockNum uint64) libcommon.Hash {
+	d1 := common.LeftPadBytes(uint256.NewInt(blockNum).Bytes(), 32)
+	d2 := common.LeftPadBytes(STATE_ROOT_STORAGE_POS.Bytes(), 32)
+	mapKey := keccak256.Hash(d1, d2)
+	mkh := libcommon.BytesToHash(mapKey)
+	hash := uint256.NewInt(0)
+	sdb.GetState(ADDRESS_SCALABLE_L2, &mkh, hash)
+	return libcommon.BytesToHash(hash.Bytes())
 }
 
 func (sdb *IntraBlockState) ScalableSetSmtRootHash(roHermezDb ReadOnlyHermezDb) error {

@@ -42,6 +42,10 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/urfave/cli/v2"
 
+	"encoding/json"
+	"os"
+	"path"
+
 	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/erigon/cmd/downloader/downloadernat"
 	"github.com/ledgerwatch/erigon/common/paths"
@@ -366,6 +370,11 @@ var (
 		Usage: "The time to wait for data to arrive from the stream before reporting an error (0s doesn't check)",
 		Value: "0s",
 	}
+	L1SyncStartBlock = cli.Uint64Flag{
+		Name:  "zkevm.l1-sync-start-block",
+		Usage: "Designed for recovery of the network from the L1 batch data, slower mode of operation than the datastream.  If set the datastream will not be used",
+		Value: 0,
+	}
 	L1ChainIdFlag = cli.Uint64Flag{
 		Name:  "zkevm.l1-chain-id",
 		Usage: "Ethereum L1 chain ID",
@@ -376,30 +385,35 @@ var (
 		Usage: "Ethereum L1 RPC endpoint",
 		Value: "",
 	}
-	L1PolygonRollupManagerFlag = cli.StringFlag{
-		Name:  "zkevm.l1-polygon-rollup-manager",
-		Usage: "Ethereum L1 Polygon Rollup Manager Address",
+	AddressSequencerFlag = cli.StringFlag{
+		Name:  "zkevm.address-sequencer",
+		Usage: "Sequencer address",
 		Value: "",
 	}
-	L1RollupFlag = cli.StringFlag{
-		Name:  "zkevm.l1-rollup",
-		Usage: "Ethereum L1 Rollup Address",
+	AddressAdminFlag = cli.StringFlag{
+		Name:  "zkevm.address-admin",
+		Usage: "Admin address",
+		Value: "",
+	}
+	AddressRollupFlag = cli.StringFlag{
+		Name:  "zkevm.address-rollup",
+		Usage: "Rollup address",
+		Value: "",
+	}
+	AddressZkevmFlag = cli.StringFlag{
+		Name:  "zkevm.address-zkevm",
+		Usage: "Zkevm address",
+		Value: "",
+	}
+	AddressGerManagerFlag = cli.StringFlag{
+		Name:  "zkevm.address-ger-manager",
+		Usage: "Ger Manager address",
 		Value: "",
 	}
 	L1RollupIdFlag = cli.Uint64Flag{
 		Name:  "zkevm.l1-rollup-id",
 		Usage: "Ethereum L1 Rollup ID",
 		Value: 1,
-	}
-	L1TopicVerificationFlag = cli.StringFlag{
-		Name:  "zkevm.l1-topic-verification",
-		Usage: "Ethereum L1 topic for verification",
-		Value: "",
-	}
-	L1TopicSequenceFlag = cli.StringFlag{
-		Name:  "zkevm.l1-topic-sequence",
-		Usage: "Ethereum L1 topic for sequence",
-		Value: "",
 	}
 	L1BlockRangeFlag = cli.Uint64Flag{
 		Name:  "zkevm.l1-block-range",
@@ -417,11 +431,6 @@ var (
 		Usage: "Ethereum L1 Matic contract address",
 		Value: "",
 	}
-	L1GERManagerContractAddressFlag = cli.StringFlag{
-		Name:  "zkevm.l1-ger-manager-contract-address",
-		Usage: "Ethereum L1 GER Manager contract address",
-		Value: "",
-	}
 	L1FirstBlockFlag = cli.Uint64Flag{
 		Name:  "zkevm.l1-first-block",
 		Usage: "First block to start syncing from on the L1",
@@ -436,11 +445,6 @@ var (
 		Name:  "zkevm.sequencer-initial-fork-id",
 		Usage: "The initial fork id to launch the sequencer with",
 		Value: 8,
-	}
-	SequencerAddressFlag = cli.StringFlag{
-		Name:  "zkevm.sequencer-address",
-		Usage: "The sequencer address to use if running as a sequencer",
-		Value: "",
 	}
 	ExecutorUrls = cli.StringFlag{
 		Name:  "zkevm.executor-urls",
@@ -482,10 +486,73 @@ var (
 		Usage: "Allow the sequencer to proceed pre-EIP155 transactions",
 		Value: false,
 	}
+	EffectiveGasPriceForTransfer = cli.Float64Flag{
+		Name:  "zkevm.effective-gas-price-transfer",
+		Usage: "Set the effective gas price in percentage for transfers",
+		Value: 1,
+	}
+	EffectiveGasPriceForContractInvocation = cli.Float64Flag{
+		Name:  "zkevm.effective-gas-price-contract-invocation",
+		Usage: "Set the effective gas price in percentage for contract invocation",
+		Value: 1,
+	}
+	EffectiveGasPriceForContractDeployment = cli.Float64Flag{
+		Name:  "zkevm.effective-gas-price-contract-deployment",
+		Usage: "Set the effective gas price in percentage for contract deployment",
+		Value: 1,
+	}
+	DefaultGasPrice = cli.Uint64Flag{
+		Name:  "zkevm.default-gas-price",
+		Usage: "Set the default/min gas price",
+		Value: 0,
+	}
+	MaxGasPrice = cli.Uint64Flag{
+		Name:  "zkevm.max-gas-price",
+		Usage: "Set the max gas price",
+		Value: 0,
+	}
+	GasPriceFactor = cli.Float64Flag{
+		Name:  "zkevm.gas-price-factor",
+		Usage: "Apply factor to L1 gas price to calculate l2 gasPrice",
+		Value: 1,
+	}
 	WitnessFullFlag = cli.BoolFlag{
 		Name:  "zkevm.witness-full",
 		Usage: "Enable/Diable witness full",
 		Value: true,
+	}
+	SyncLimit = cli.UintFlag{
+		Name:  "zkevm.sync-limit",
+		Usage: "Limit the number of blocks to sync, this will halt batches and execution to this number but keep the node active",
+		Value: 0,
+	}
+	PoolManagerUrl = cli.StringFlag{
+		Name:  "zkevm.pool-manager-url",
+		Usage: "The URL of the pool manager. If set, eth_sendRawTransaction will be redirected there.",
+		Value: "",
+	}
+  DisableVirtualCounters = cli.BoolFlag{
+		Name:  "zkevm.disable-virtual-counters",
+		Usage: "Disable the virtual counters. This has an effect on on sequencer node and when external executor is not enabled.",
+		Value: false,
+	}
+	SupportGasless = cli.BoolFlag{
+		Name:  "zkevm.gasless",
+		Usage: "Support gasless transactions",
+		Value: false,
+	}
+	DebugLimit = cli.UintFlag{
+		Name:  "debug.limit",
+		Usage: "Limit the number of blocks to sync",
+		Value: 0,
+	}
+	DebugStep = cli.UintFlag{
+		Name:  "debug.step",
+		Usage: "Number of blocks to process each run of the stage loop",
+	}
+	DebugStepAfter = cli.UintFlag{
+		Name:  "debug.step-after",
+		Usage: "Start incrementing by debug.step after this block",
 	}
 	RpcBatchConcurrencyFlag = cli.UintFlag{
 		Name:  "rpc.batch.concurrency",
@@ -1359,7 +1426,7 @@ func setGPOCobra(f *pflag.FlagSet, cfg *gaspricecfg.Config) {
 
 func setTxPool(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	if ctx.IsSet(TxPoolDisableFlag.Name) {
-		cfg.Disable = true
+		cfg.Disable = ctx.Bool(TxPoolDisableFlag.Name)
 	}
 	if ctx.IsSet(TxPoolLocalsFlag.Name) {
 		locals := strings.Split(ctx.String(TxPoolLocalsFlag.Name), ",")
@@ -1549,6 +1616,13 @@ func setWhitelist(ctx *cli.Context, cfg *ethconfig.Config) {
 	}
 }
 
+type DynamicConfig struct {
+	Root       string `json:"root"`
+	Timestamp  uint64 `json:"timestamp"`
+	GasLimit   uint64 `json:"gasLimit"`
+	Difficulty int64  `json:"difficulty"`
+}
+
 // CheckExclusive verifies that only a single instance of the provided flags was
 // set by the user. Each flag might optionally be followed by a string type to
 // specialize it further.
@@ -1682,41 +1756,76 @@ func SetEthConfig(ctx *cli.Context, nodeConfig *nodecfg.Config, cfg *ethconfig.C
 	}
 	// Override any default configs for hard coded networks.
 	chain := ctx.String(ChainFlag.Name)
-
-	switch chain {
-	default:
+	if strings.HasPrefix(chain, "dynamic") {
 		genesis := core.GenesisBlockByChainName(chain)
-		genesisHash := params.GenesisHashByChainName(chain)
-		if (genesis == nil) || (genesisHash == nil) {
-			Fatalf("ChainDB name is not recognized: %s", chain)
-			return
+
+		dConf := DynamicConfig{}
+
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			panic(err)
 		}
+
+		basePath := path.Join(homeDir, "dynamic-configs")
+		filename := path.Join(basePath, chain+"-conf.json")
+
+		if _, err := os.Stat(filename); err == nil {
+			dConfBytes, err := os.ReadFile(filename)
+			if err != nil {
+				panic(err)
+			}
+			if err := json.Unmarshal(dConfBytes, &dConf); err != nil {
+				panic(err)
+			}
+		}
+
+		genesis.Timestamp = dConf.Timestamp
+		genesis.GasLimit = dConf.GasLimit
+		genesis.Difficulty = big.NewInt(dConf.Difficulty)
+
 		cfg.Genesis = genesis
-		if !ctx.IsSet(NetworkIdFlag.Name) {
-			cfg.NetworkID = params.NetworkIDByChainName(chain)
-		}
-		SetDNSDiscoveryDefaults(cfg, *genesisHash)
-	case "":
-		if cfg.NetworkID == 1 {
-			SetDNSDiscoveryDefaults(cfg, params.MainnetGenesisHash)
-		}
-	case networkname.DevChainName:
-		if !ctx.IsSet(NetworkIdFlag.Name) {
-			cfg.NetworkID = 1337
-		}
 
-		// Create new developer account or reuse existing one
-		developer := cfg.Miner.Etherbase
-		if developer == (libcommon.Address{}) {
-			Fatalf("Please specify developer account address using --miner.etherbase")
+		genesisHash := libcommon.HexToHash(dConf.Root)
+		if !ctx.IsSet(NetworkIdFlag.Name) {
+			log.Warn("NetworkID is not set for dynamic chain", "chain", chain, "networkID", cfg.NetworkID)
 		}
-		log.Info("Using developer account", "address", developer)
+		SetDNSDiscoveryDefaults(cfg, genesisHash)
+	} else {
+		switch chain {
+		default:
+			genesis := core.GenesisBlockByChainName(chain)
+			genesisHash := params.GenesisHashByChainName(chain)
+			if (genesis == nil) || (genesisHash == nil) {
+				Fatalf("ChainDB name is not recognized: %s", chain)
+				return
+			}
+			cfg.Genesis = genesis
+			if !ctx.IsSet(NetworkIdFlag.Name) {
+				cfg.NetworkID = params.NetworkIDByChainName(chain)
+			}
+			SetDNSDiscoveryDefaults(cfg, *genesisHash)
+		case "":
+			if cfg.NetworkID == 1 {
+				SetDNSDiscoveryDefaults(cfg, params.MainnetGenesisHash)
+			}
+		case networkname.DevChainName:
+			if !ctx.IsSet(NetworkIdFlag.Name) {
+				cfg.NetworkID = 1337
+			}
 
-		// Create a new developer genesis block or reuse existing one
-		cfg.Genesis = core.DeveloperGenesisBlock(uint64(ctx.Int(DeveloperPeriodFlag.Name)), developer)
-		log.Info("Using custom developer period", "seconds", cfg.Genesis.Config.Clique.Period)
-		if !ctx.IsSet(MinerGasPriceFlag.Name) {
-			cfg.Miner.GasPrice = big.NewInt(1)
+			// Create new developer account or reuse existing one
+			developer := cfg.Miner.Etherbase
+			if developer == (libcommon.Address{}) {
+				Fatalf("Please specify developer account address using --miner.etherbase")
+			}
+			log.Info("Using developer account", "address", developer)
+
+			// Create a new developer genesis block or reuse existing one
+			cfg.Genesis = core.DeveloperGenesisBlock(uint64(ctx.Int(DeveloperPeriodFlag.Name)), developer)
+			log.Info("Using custom developer period", "seconds", cfg.Genesis.Config.Clique.Period)
+			if !ctx.IsSet(MinerGasPriceFlag.Name) {
+				cfg.Miner.GasPrice = big.NewInt(1)
+			}
 		}
 	}
 

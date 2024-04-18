@@ -64,6 +64,19 @@ func (c Counters) UsedAsString() string {
 	return res
 }
 
+func (c Counters) UsedAsMap() map[string]int {
+	return map[string]int{
+		"SHA": c[SHA].used,
+		"A":   c[A].used,
+		"B":   c[B].used,
+		"K":   c[K].used,
+		"M":   c[M].used,
+		"P":   c[P].used,
+		"S":   c[S].used,
+		"D":   c[D].used,
+	}
+}
+
 type CounterKey string
 
 var (
@@ -108,6 +121,13 @@ func calculateSmtLevels(smtMaxLevel int, minValue int) int {
 		binaryLength = minValue
 	}
 	return binaryLength
+}
+
+func NewUnlimitedCounterCollector() *CounterCollector {
+	return &CounterCollector{
+		counters:  unlimitedCounters(),
+		smtLevels: math.MaxInt32,
+	}
 }
 
 func NewCounterCollector(smtLevels int) *CounterCollector {
@@ -163,6 +183,51 @@ func defaultCounters() Counters {
 			remaining:     int(math.Floor(totalSteps-1)/31488) * 7,
 			name:          "sha256",
 			initialAmount: int(math.Floor(totalSteps-1)/31488) * 7,
+		},
+	}
+}
+
+func unlimitedCounters() Counters {
+	return Counters{
+		S: {
+			remaining:     math.MaxInt32,
+			name:          "totalSteps",
+			initialAmount: math.MaxInt32,
+		},
+		A: {
+			remaining:     math.MaxInt32,
+			name:          "arith",
+			initialAmount: math.MaxInt32,
+		},
+		B: {
+			remaining:     math.MaxInt32,
+			name:          "binary",
+			initialAmount: math.MaxInt32,
+		},
+		M: {
+			remaining:     math.MaxInt32,
+			name:          "memAlign",
+			initialAmount: math.MaxInt32,
+		},
+		K: {
+			remaining:     math.MaxInt32,
+			name:          "keccaks",
+			initialAmount: math.MaxInt32,
+		},
+		D: {
+			remaining:     math.MaxInt32,
+			name:          "padding",
+			initialAmount: math.MaxInt32,
+		},
+		P: {
+			remaining:     math.MaxInt32,
+			name:          "poseidon",
+			initialAmount: math.MaxInt32,
+		},
+		SHA: {
+			remaining:     math.MaxInt32,
+			name:          "sha256",
+			initialAmount: math.MaxInt32,
 		},
 	}
 }

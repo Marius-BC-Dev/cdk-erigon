@@ -11,10 +11,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/holiman/uint256"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/length"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/holiman/uint256"
 	eriCommon "github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/common/dbutils"
 	"github.com/ledgerwatch/erigon/core/types/accounts"
@@ -294,19 +294,8 @@ func (tds *TrieDbState) buildStorageReads() eriCommon.StorageKeys {
 	for storageKey := range tds.aggregateBuffer.storageReads {
 		storageTouches = append(storageTouches, storageKey)
 	}
-	storageTouches = append(storageTouches, tds.scalableStorageKeys()...)
 	sort.Sort(storageTouches)
 	return storageTouches
-}
-
-func (tds *TrieDbState) scalableStorageKeys() eriCommon.StorageKeys {
-	keys := eriCommon.StorageKeys{}
-	keys = append(keys, buildStorageKey(ADDRESS_SCALABLE_L2, 1, LAST_BLOCK_STORAGE_POS))
-	keys = append(keys, buildStorageKey(ADDRESS_SCALABLE_L2, 1, STATE_ROOT_STORAGE_POS))
-	keys = append(keys, buildStorageKey(ADDRESS_SCALABLE_L2, 1, TIMESTAMP_STORAGE_POS))
-	keys = append(keys, buildStorageKey(ADDRESS_SCALABLE_L2, 1, BLOCK_INFO_ROOT_STORAGE_POS))
-	keys = append(keys, buildStorageKey(GER_MANAGER_ADDRESS, 1, GLOBAL_EXIT_ROOT_STORAGE_POS))
-	return keys
 }
 
 func buildStorageKey(address common.Address, incarnation uint64, slot common.Hash) eriCommon.StorageKey {
@@ -805,10 +794,15 @@ func (tsw *TrieStateWriter) WriteAccountStorage(address common.Address, incarnat
 		tsw.tds.currentBuffer.storageUpdates[addrHash] = m
 	}
 	tsw.tds.currentBuffer.storageIncarnation[addrHash] = incarnation
-	seckey, err := tsw.tds.HashSave(key[:])
+
+	// we need to clone the key as it's passed as a pointer
+	cloneKey := make([]byte, len(*key))
+	copy(cloneKey, key[:])
+	seckey, err := tsw.tds.HashSave(cloneKey)
 	if err != nil {
 		return err
 	}
+
 	var storageKey eriCommon.StorageKey
 	copy(storageKey[:], dbutils.GenerateCompositeStorageKey(addrHash, incarnation, seckey))
 	tsw.tds.currentBuffer.storageReads[storageKey] = struct{}{}
@@ -947,14 +941,9 @@ func (tds *TrieDbState) ResolveSMTRetainList() (*trie.RetainList, error) {
 		keys = append(keys, codeLengthKey.GetPath())
 	}
 
-	for _, storageKey := range storageTouches {
-		addrHash, _, keyHash := dbutils.ParseCompositeStorageKey(storageKey[:])
-
-		ethAddr := common.BytesToAddress(tds.preimageMap[addrHash]).String()
+	getSMTPath := func(ethAddr string, key string) ([]int, error) {
 		a := utils.ConvertHexToBigInt(ethAddr)
 		addr := utils.ScalarToArrayBig(a)
-
-		key := common.BytesToHash(tds.preimageMap[keyHash]).String()
 
 		storageKey, err := utils.KeyContractStorage(addr, key)
 
@@ -962,7 +951,39 @@ func (tds *TrieDbState) ResolveSMTRetainList() (*trie.RetainList, error) {
 			return nil, err
 		}
 
-		keys = append(keys, storageKey.GetPath())
+		return storageKey.GetPath(), nil
+	}
+
+	for _, storageKey := range storageTouches {
+		addrHash, _, keyHash := dbutils.ParseCompositeStorageKey(storageKey[:])
+
+		ethAddr := common.BytesToAddress(tds.preimageMap[addrHash]).String()
+		key := common.BytesToHash(tds.preimageMap[keyHash]).String()
+
+		smtPath, err := getSMTPath(ethAddr, key)
+
+		if err != nil {
+			return nil, err
+		}
+
+		keys = append(keys, smtPath)
+	}
+
+	/*add 0x00...05ca1ab1e and GER manager values*/
+	for _, slot := range []common.Hash{LAST_BLOCK_STORAGE_POS, STATE_ROOT_STORAGE_POS, TIMESTAMP_STORAGE_POS, BLOCK_INFO_ROOT_STORAGE_POS} {
+		smtPath, err := getSMTPath(ADDRESS_SCALABLE_L2.String(), slot.String())
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, smtPath)
+	}
+
+	for _, slot := range []common.Hash{GLOBAL_EXIT_ROOT_STORAGE_POS, GLOBAL_EXIT_ROOT_POS_1} {
+		smtPath, err := getSMTPath(GER_MANAGER_ADDRESS.String(), slot.String())
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, smtPath)
 	}
 
 	rl := trie.NewRetainList(0)
