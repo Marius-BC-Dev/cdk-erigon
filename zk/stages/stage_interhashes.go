@@ -302,7 +302,6 @@ func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb
 
 			sk := fmt.Sprintf("0x%032x", key)
 			v := fmt.Sprintf("0x%032x", acc)
-			log.Info("bbbbbbbbb", "sk", key, "v", v)
 			as[sk] = fmt.Sprint(TrimHexString(v))
 		}
 		return nil
