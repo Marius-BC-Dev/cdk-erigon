@@ -51,7 +51,6 @@ import (
 	"github.com/ledgerwatch/erigon/params/networkname"
 	eridb "github.com/ledgerwatch/erigon/smt/pkg/db"
 	"github.com/ledgerwatch/erigon/smt/pkg/smt"
-	"golang.org/x/exp/slices"
 )
 
 // CommitGenesisBlock writes or updates the genesis block in db.
@@ -234,6 +233,7 @@ func WriteGenesisState(g *types.Genesis, tx kv.RwTx, tmpDir string) (*types.Bloc
 			return nil, statedb, sparseTree, fmt.Errorf("cannot write history: %w", err)
 		}
 	}
+
 	return block, statedb, sparseTree, nil
 }
 
@@ -616,7 +616,7 @@ func sortedAllocKeys(m types.GenesisAlloc) []string {
 		keys[i] = string(k.Bytes())
 		i++
 	}
-	slices.Sort(keys)
+	// slices.Sort(keys)
 	return keys
 }
 

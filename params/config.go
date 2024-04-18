@@ -69,7 +69,7 @@ var (
 	HermezEtrogGenesisHash                 = libcommon.HexToHash("0xccfed260e3ef666b058dcd577551de8e00c743c47774a39ca7dbcd9214ba370a")
 	LumozPrivateChainLayer2GenesisHash     = libcommon.HexToHash("0x68ca1c9ea72965f7067e20f68f0d9b7a2969bd20d099d7275d055225e7abe6ce")
 	MerlinV2Layer2TestChainNameGenesisHash = libcommon.HexToHash("0x4189beeca3e6406dfc2f37f818ad1b7d08a1d7687268ba108a67c4edaf5be5ff")
-	ZkevmFor58ChainNameGenesisHash         = libcommon.HexToHash("0x1103460d9ee0d856a57066f1dadeb7bd5605d0b0d269b707d3681560971088c2")
+	ZkevmFor58ChainNameGenesisHash         = libcommon.HexToHash("0x102b7a997157844b5c11ce5eef7cdca71dae701f35d919c12ba5a8318db3f63b")
 )
 
 var (

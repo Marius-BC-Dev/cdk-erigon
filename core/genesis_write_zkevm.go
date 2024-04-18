@@ -113,7 +113,7 @@ func MerlinV2TestnetGenesisBlock() *types.Genesis {
 func ZkevmFork58GenesisBlock() *types.Genesis {
 	return &types.Genesis{
 		Config:     params.ZkevmFor58Config,
-		Timestamp:  1712496600,
+		Timestamp:  1712475797,
 		GasLimit:   0x0,
 		Difficulty: big.NewInt(0x0),
 		Alloc:      readPrealloc("allocs/zkevm-fork5-8.json"),
