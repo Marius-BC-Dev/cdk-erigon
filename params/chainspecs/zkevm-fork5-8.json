@@ -21,5 +21,6 @@
   "cancunTime": 9999999999999999999999999999999999999999999999999,
   "pragueTime": 9999999999999999999999999999999999999999999999999,
   "ethash": {},
-  "forkID7EtrogBlock": 13
+  "forkID7EtrogBlock": 13,
+  "forkID88ElderberryBlock": 14
 }
