@@ -8,3 +8,4 @@ build
 tests/testdata
 cmd/prometheus
 vendor
+data

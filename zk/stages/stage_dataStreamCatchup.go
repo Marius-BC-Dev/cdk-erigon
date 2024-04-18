@@ -116,6 +116,7 @@ func CatchupDatastream(logPrefix string, tx kv.RwTx, stream *datastreamer.Stream
 	}
 
 	finalBlockNumber := highestExecutedBlock
+	}
 
 	previousProgress, err := stages.GetStageProgress(tx, stages.DataStream)
 	if err != nil {

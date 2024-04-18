@@ -291,6 +291,7 @@ func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb
 			}
 			addr = common.BytesToAddress(k)
 			inc = a.Incarnation
+			log.Info("aaaaaaa", "addr", addr, "account", *a)
 			// empty storage of previous account
 			as = make(map[string]string)
 		} else { // otherwise we're reading storage
@@ -301,7 +302,7 @@ func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb
 
 			sk := fmt.Sprintf("0x%032x", key)
 			v := fmt.Sprintf("0x%032x", acc)
-
+			log.Info("bbbbbbbbb", "sk", key, "v", v)
 			as[sk] = fmt.Sprint(TrimHexString(v))
 		}
 		return nil

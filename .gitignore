@@ -85,3 +85,7 @@ local.yml
 
 dist
 __debug_bin
+/erigon-data/
+/erigon-data-follower-01/
+/erigon-data-master/
+/data/
