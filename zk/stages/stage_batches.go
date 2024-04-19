@@ -654,6 +654,7 @@ func getGasLimit(forkId uint16) uint64 {
 func writeL2Block(eriDb ErigonDb, hermezDb HermezDb, l2Block *types.FullL2Block) error {
 	bn := new(big.Int).SetUint64(l2Block.L2BlockNumber)
 	txs := make([]ethTypes.Transaction, 0, len(l2Block.L2Txs))
+	log.Info("debug", "len(txs)", len(txs))
 	for _, transaction := range l2Block.L2Txs {
 		ltx, _, err := txtype.DecodeTx(transaction.Encoded, transaction.EffectiveGasPricePercentage, l2Block.ForkId)
 		if err != nil {
@@ -675,6 +676,7 @@ func writeL2Block(eriDb ErigonDb, hermezDb HermezDb, l2Block *types.FullL2Block)
 	}
 	txCollection := ethTypes.Transactions(txs)
 	txHash := ethTypes.DeriveSha(txCollection)
+	log.Info("debug", "txHash", txHash.String(), "l2Block.StateRoot", l2Block.StateRoot.String())
 
 	gasLimit := getGasLimit(l2Block.ForkId)
 

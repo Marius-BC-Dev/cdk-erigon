@@ -164,6 +164,7 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 		}
 		expectedRootHash = syncHeadHeader.Root
 		headerHash = syncHeadHeader.Hash()
+		log.Info("debug **************", "incrementTo", incrementTo)
 		if root, err = zkIncrementIntermediateHashes(logPrefix, s, tx, eridb, smt, incrementTo, cfg.checkRoot, &expectedRootHash, quit); err != nil {
 			return trie.EmptyRoot, err
 		}
