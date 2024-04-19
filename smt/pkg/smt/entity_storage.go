@@ -10,6 +10,7 @@ import (
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/core/types/accounts"
 	"github.com/ledgerwatch/erigon/smt/pkg/utils"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 )
 
 func (s *SMT) SetAccountState(ethAddr string, balance, nonce *big.Int) (*big.Int, error) {
@@ -207,7 +208,9 @@ func (s *SMT) SetStorage(logPrefix string, accChanges map[libcommon.Address]*acc
 	initialCapacity := len(accChanges) + len(codeChanges) + len(storageChanges)
 	keysBatchStorage := make([]*utils.NodeKey, 0, initialCapacity)
 	valuesBatchStorage := make([]*utils.NodeValue8, 0, initialCapacity)
-
+	log.Info("accChanges", accChanges)
+	log.Info("codeChanges", codeChanges)
+	log.Info("storageChanges", storageChanges)
 	for addr, acc := range accChanges {
 		ethAddr := addr.String()
 		keyBalance, err := utils.KeyEthAddrBalance(ethAddr)

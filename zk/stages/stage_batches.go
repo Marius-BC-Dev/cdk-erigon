@@ -731,9 +731,12 @@ func writeL2Block(eriDb ErigonDb, hermezDb HermezDb, l2Block *types.FullL2Block)
 		}
 	}
 
+	log.Info("aaaaaaa start", " h.Hash()", h.Hash())
 	if err := eriDb.WriteBody(bn, h.Hash(), txs); err != nil {
 		return fmt.Errorf("write body error: %v", err)
 	}
+
+	log.Info("aaaaaaa end")
 
 	if err := hermezDb.WriteForkId(l2Block.BatchNumber, uint64(l2Block.ForkId)); err != nil {
 		return fmt.Errorf("write block batch error: %v", err)

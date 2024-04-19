@@ -160,7 +160,6 @@ func ExecuteBlockEphemerallyZk(
 	logIndex := int64(0)
 	usedGas := new(uint64)
 
-	log.Info("debug", "len(blockTransactions)", len(blockTransactions))
 	for txIndex, tx := range blockTransactions {
 		ibs.Prepare(tx.Hash(), block.Hash(), txIndex)
 		writeTrace := false
@@ -319,6 +318,9 @@ func ExecuteBlockEphemerallyZk(
 			return nil, err
 		}
 	}
+
+	log.Info("testest ", "TxRoot", types.DeriveSha(includedTxs))
+
 	blockLogs := ibs.Logs()
 	execRs := &EphemeralExecResult{
 		TxRoot:      types.DeriveSha(includedTxs),
