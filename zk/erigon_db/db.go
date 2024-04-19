@@ -9,6 +9,7 @@ import (
 
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	ethTypes "github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 )
 
 var sha3UncleHash = common.HexToHash("0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347")
@@ -41,12 +42,14 @@ func (db ErigonDb) WriteHeader(
 		Time:       ts,
 		Extra:      make([]byte, 0),
 	}
-
+	log.Info("WriteHeader start")
 	rawdb.WriteHeader(db.tx, h)
+
 	err := rawdb.WriteCanonicalHash(db.tx, h.Hash(), blockNo.Uint64())
 	if err != nil {
 		return nil, fmt.Errorf("failed to write canonical hash: %w", err)
 	}
+	log.Info("WriteHeader end")
 	return h, nil
 }
 

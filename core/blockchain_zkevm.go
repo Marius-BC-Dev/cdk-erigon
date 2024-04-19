@@ -25,7 +25,7 @@ import (
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 
 	"github.com/ledgerwatch/erigon/chain"
-	"github.com/ledgerwatch/erigon/zkevm/log"
+	"github.com/ledgerwatch/log/v3"
 
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 
@@ -312,8 +312,10 @@ func ExecuteBlockEphemerallyZk(
 		//	return nil, fmt.Errorf("bloom computed by execution: %x, in header: %x", bloom, header.Bloom)
 		//}
 	}
+	log.Info("FinalizeBlockExecution 1")
 	if !vmConfig.ReadOnly {
 		txs := blockTransactions
+		log.Info("FinalizeBlockExecution 2", "len(txs)", len(txs))
 		if _, _, _, err := FinalizeBlockExecution(engine, stateReader, block.Header(), txs, block.Uncles(), stateWriter, chainConfig, ibs, receipts, block.Withdrawals(), chainReader, false, excessDataGas); err != nil {
 			return nil, err
 		}

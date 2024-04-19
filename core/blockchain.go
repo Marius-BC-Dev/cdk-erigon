@@ -31,6 +31,7 @@ import (
 
 	"github.com/ledgerwatch/erigon/chain"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
+	"github.com/ledgerwatch/log/v3"
 
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 
@@ -454,6 +455,8 @@ func FinalizeBlockExecution(
 	syscall := func(contract libcommon.Address, data []byte) ([]byte, error) {
 		return SysCallContract(contract, data, *cc, ibs, header, engine, false /* constCall */, excessDataGas)
 	}
+
+	log.Info("FinalizeBlockExecution 3", "isMining", isMining)
 	if isMining {
 		newBlock, newTxs, newReceipt, err = engine.FinalizeAndAssemble(cc, header, ibs, txs, uncles, receipts, withdrawals, headerReader, syscall, nil)
 	} else {
