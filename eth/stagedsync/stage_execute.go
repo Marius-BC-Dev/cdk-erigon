@@ -252,6 +252,7 @@ func newStateReaderWriter(
 	} else {
 		accumulator = nil
 	}
+	log.Info("debug test", "writeChangesets", writeChangesets)
 	if writeChangesets {
 		stateWriter = state.NewPlainStateWriter(batch, tx, block.NumberU64()).SetAccumulator(accumulator)
 	} else {

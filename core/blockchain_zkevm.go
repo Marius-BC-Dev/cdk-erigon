@@ -159,7 +159,7 @@ func ExecuteBlockEphemerallyZk(
 	noop := state.NewNoopWriter()
 	logIndex := int64(0)
 	usedGas := new(uint64)
-
+	log.Info("blockNum: ", blockNum, " , len(blockTransactions): ", len(blockTransactions))
 	for txIndex, tx := range blockTransactions {
 		ibs.Prepare(tx.Hash(), block.Hash(), txIndex)
 		writeTrace := false
