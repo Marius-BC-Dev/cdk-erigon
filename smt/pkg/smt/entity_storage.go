@@ -208,10 +208,9 @@ func (s *SMT) SetStorage(logPrefix string, accChanges map[libcommon.Address]*acc
 	initialCapacity := len(accChanges) + len(codeChanges) + len(storageChanges)
 	keysBatchStorage := make([]*utils.NodeKey, 0, initialCapacity)
 	valuesBatchStorage := make([]*utils.NodeValue8, 0, initialCapacity)
-	log.Info("accChanges", accChanges)
-	log.Info("codeChanges", codeChanges)
-	log.Info("storageChanges", storageChanges)
+	log.Info("accChanges start")
 	for addr, acc := range accChanges {
+		log.Info(addr, *acc)
 		ethAddr := addr.String()
 		keyBalance, err := utils.KeyEthAddrBalance(ethAddr)
 		if err != nil {
@@ -259,7 +258,10 @@ func (s *SMT) SetStorage(logPrefix string, accChanges map[libcommon.Address]*acc
 		}
 	}
 
+	log.Info("codeChanges  state")
+
 	for addr, code := range codeChanges {
+		log.Info(addr, code)
 		ethAddr := addr.String()
 		keyContractCode, err := utils.KeyContractCode(ethAddr)
 		if err != nil {
@@ -304,7 +306,9 @@ func (s *SMT) SetStorage(logPrefix string, accChanges map[libcommon.Address]*acc
 		}
 	}
 
+	log.Info("storageChanges start")
 	for addr, storage := range storageChanges {
+		log.Info(addr, storage)
 		ethAddr := addr.String()
 		ethAddrBigInt := utils.ConvertHexToBigInt(ethAddr)
 		ethAddrBigIngArray := utils.ScalarToArrayBig(ethAddrBigInt)
