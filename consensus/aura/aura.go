@@ -822,6 +822,7 @@ func (c *AuRa) ApplyRewards(header *types.Header, state *state.IntraBlockState, 
 
 // word `signal epoch` == word `pending epoch`
 func (c *AuRa) Finalize(config *chain.Config, header *types.Header, state *state.IntraBlockState, txs types.Transactions, uncles []*types.Header, receipts types.Receipts, withdrawals []*types.Withdrawal, chain consensus.ChainHeaderReader, syscall consensus.SystemCall) (types.Transactions, types.Receipts, error) {
+	log.Info("AuRa")
 	if err := c.ApplyRewards(header, state, syscall); err != nil {
 		return nil, nil, err
 	}

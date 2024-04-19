@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/holiman/uint256"
 	erigonchain "github.com/gateway-fm/cdk-erigon-lib/chain"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/chain"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 
 	"github.com/ledgerwatch/erigon/consensus"
 	"github.com/ledgerwatch/erigon/consensus/aura"
@@ -128,6 +129,7 @@ func (s *Serenity) Finalize(config *chain.Config, header *types.Header, state *s
 	txs types.Transactions, uncles []*types.Header, r types.Receipts, withdrawals []*types.Withdrawal,
 	chain consensus.ChainHeaderReader, syscall consensus.SystemCall,
 ) (types.Transactions, types.Receipts, error) {
+	log.Info("Serenity")
 	if !IsPoSHeader(header) {
 		return s.eth1Engine.Finalize(config, header, state, txs, uncles, r, withdrawals, chain, syscall)
 	}

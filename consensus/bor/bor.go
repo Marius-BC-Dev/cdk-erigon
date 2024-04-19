@@ -15,12 +15,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/btree"
-	lru "github.com/hashicorp/golang-lru/v2"
 	erigonchain "github.com/gateway-fm/cdk-erigon-lib/chain"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/length"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/google/btree"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/log/v3"
 
@@ -758,7 +758,7 @@ func (c *Bor) Finalize(config *chain.Config, header *types.Header, state *state.
 	chain consensus.ChainHeaderReader, syscall consensus.SystemCall,
 ) (types.Transactions, types.Receipts, error) {
 	var err error
-
+	log.Info("Bor")
 	headerNumber := header.Number.Uint64()
 
 	if isSprintStart(headerNumber, c.config.CalculateSprint(headerNumber)) {
