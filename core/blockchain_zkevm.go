@@ -25,6 +25,7 @@ import (
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 
 	"github.com/ledgerwatch/erigon/chain"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 
@@ -128,7 +129,7 @@ func ExecuteBlockEphemerallyZk(
 	blockTime := block.Time()
 	ibs.SyncerPreExecuteStateSet(chainConfig, blockNum, blockTime, prevBlockHash, &blockGer, &l1BlockHash, gersInBetween)
 	blockInfoTree := blockinfo.NewBlockInfoTree()
-	if chainConfig.IsForkID7Etrog(blockNum) {
+	if chainConfig.IsForkID8Elderberry(blockNum) {
 		coinbase := block.Coinbase()
 
 		// this is a case when we have injected batches
@@ -159,6 +160,7 @@ func ExecuteBlockEphemerallyZk(
 	logIndex := int64(0)
 	usedGas := new(uint64)
 
+	log.Info("debug", "len(blockTransactions)", len(blockTransactions))
 	for txIndex, tx := range blockTransactions {
 		ibs.Prepare(tx.Hash(), block.Hash(), txIndex)
 		writeTrace := false
@@ -281,7 +283,7 @@ func ExecuteBlockEphemerallyZk(
 	}
 
 	var l2InfoRoot libcommon.Hash
-	if chainConfig.IsForkID7Etrog(blockNum) {
+	if chainConfig.IsForkID8Elderberry(blockNum) {
 		// [zkevm] - set the block info tree root
 		root, err := blockInfoTree.SetBlockGasUsed(*usedGas)
 		if err != nil {
