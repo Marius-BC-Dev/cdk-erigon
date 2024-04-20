@@ -205,6 +205,8 @@ func (sdb *IntraBlockState) ScalableSetBlockNumberToHash(blockNumber uint64, rod
 		return err
 	}
 
+	log.Info("8888888 ", ", blockNumber = ", blockNumber, ", rpcHash = ", rpcHash.Hex())
+
 	sdb.scalableSetBlockHash(blockNumber, &rpcHash)
 
 	return nil
