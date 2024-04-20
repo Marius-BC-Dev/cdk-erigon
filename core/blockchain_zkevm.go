@@ -209,11 +209,11 @@ func ExecuteBlockEphemerallyZk(
 
 		// forkid8 tje poststate is empty
 		// forkid8 also fixed the bugs with logs and cumulative gas used
-		if !chainConfig.IsForkID8Elderberry(blockNum) {
+		if !chainConfig.IsForkID8Elderberry(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) {
 			// the stateroot in the transactions that comes from the datastream
 			// is the one after smart contract writes so it can't be used
 			// but since pre forkid7 blocks have 1 tx only, we can use the block root
-			if chainConfig.IsForkID7Etrog(blockNum) {
+			if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) {
 				receipt.PostState = intermediateState.Bytes()
 			} else {
 				receipt.PostState = header.Root.Bytes()
@@ -243,13 +243,13 @@ func ExecuteBlockEphemerallyZk(
 				receipts = append(receipts, receipt)
 			}
 		}
-		if !chainConfig.IsForkID7Etrog(block.NumberU64()) {
+		if !chainConfig.IsForkID7Etrog(block.NumberU64()) && !chainConfig.IsUpgradeEtrog(block.NonceU64()) {
 			if err := ibs.ScalableSetSmtRootHash(roHermezDb); err != nil {
 				return nil, err
 			}
 		}
 
-		if chainConfig.IsForkID7Etrog(blockNum) {
+		if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) {
 			txSender, _ := tx.GetSender()
 			l2TxHash, err := txTypes.ComputeL2TxHash(
 				tx.GetChainID().ToBig(),
