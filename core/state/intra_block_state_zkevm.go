@@ -81,7 +81,7 @@ func (sdb *IntraBlockState) SyncerPreExecuteStateSet(chainConfig *chain.Config, 
 	emptyHash := libcommon.Hash{}
 
 	//ETROG
-	if chainConfig.IsForkID7Etrog(blockNumber) || chainConfig.IsUpgradeEtrog(blockNumber) {
+	if chainConfig.IsForkID7Etrog(blockNumber) {
 		currentTimestamp := sdb.ScalableGetTimestamp()
 		if blockTimestamp > currentTimestamp {
 			sdb.ScalableSetTimestamp(blockTimestamp)
@@ -101,6 +101,11 @@ func (sdb *IntraBlockState) SyncerPreExecuteStateSet(chainConfig *chain.Config, 
 				Timestamp:      blockTimestamp,
 			}
 			*gerUpdates = append(*gerUpdates, blockGerUpdate)
+		}
+
+		if chainConfig.IsUpgradeEtrog(blockNumber) {
+			//save prev block hash
+			sdb.scalableSetBlockHash(blockNumber-1, prevBlockHash)
 		}
 
 		for _, ger := range *gerUpdates {
