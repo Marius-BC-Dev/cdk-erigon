@@ -10,6 +10,7 @@ import (
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/core/types"
 	dstypes "github.com/ledgerwatch/erigon/zk/datastream/types"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 )
 
 var (
@@ -104,8 +105,16 @@ func (sdb *IntraBlockState) SyncerPreExecuteStateSet(chainConfig *chain.Config, 
 		}
 
 		if chainConfig.IsUpgradeEtrog(blockNumber) {
+			currentTimestamp := sdb.ScalableGetTimestamp()
+			if blockTimestamp > currentTimestamp {
+				sdb.ScalableSetTimestamp(blockTimestamp)
+			}
+
 			//save prev block hash
 			sdb.scalableSetBlockHash(blockNumber-1, prevBlockHash)
+			if blockGer != nil && *blockGer != emptyHash {
+				sdb.WriteGerManagerL1BlockHash(*blockGer, *l1BlockHash)
+			}
 		}
 
 		for _, ger := range *gerUpdates {
@@ -222,6 +231,7 @@ func (sdb *IntraBlockState) WriteGlobalExitRootTimestamp(ger libcommon.Hash, tim
 	mapKey := keccak256.Hash(d1, d2)
 	mkh := libcommon.BytesToHash(mapKey)
 	val := uint256.NewInt(0).SetUint64(timestamp)
+	log.Info("aaaaaabbbbbb ", "mkh: ", mkh.Hex())
 	sdb.SetState(GER_MANAGER_ADDRESS, &mkh, *val)
 }
 
