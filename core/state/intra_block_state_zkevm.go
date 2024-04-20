@@ -33,6 +33,7 @@ type ReadOnlyHermezDb interface {
 	GetBlockL1BlockHash(l2BlockNo uint64) (libcommon.Hash, error)
 	GetGerForL1BlockHash(l1BlockHash libcommon.Hash) (libcommon.Hash, error)
 	GetIntermediateTxStateRoot(blockNum uint64, txhash libcommon.Hash) (libcommon.Hash, error)
+	GetBatchGlobalExitRoot(batchNum uint64) (*dstypes.GerUpdate, error)
 }
 
 func (sdb *IntraBlockState) GetTxCount() (uint64, error) {
@@ -60,7 +61,6 @@ func (sdb *IntraBlockState) PreExecuteStateSet(chainConfig *chain.Config, blockN
 	sdb.scalableSetBlockNum(blockNumber)
 
 	//ETROG
-	log.Info("2222222 ", ", stateRoot = ", stateRoot.Hex(), ", blockNumber = ", blockNumber)
 	if chainConfig.IsForkID7Etrog(blockNumber) || chainConfig.IsUpgradeEtrog(blockNumber) {
 		currentTimestamp := sdb.ScalableGetTimestamp()
 		if blockTimestamp > currentTimestamp {

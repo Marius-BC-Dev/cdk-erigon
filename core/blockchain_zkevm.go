@@ -126,6 +126,20 @@ func ExecuteBlockEphemerallyZk(
 		return nil, err
 	}
 
+	if chainConfig.IsUpgradeEtrog(blockNum) {
+		batchNum, err := roHermezDb.GetBatchNoByL2Block(blockNum)
+		if err != nil {
+			return nil, err
+		}
+
+		ger, err := roHermezDb.GetBatchGlobalExitRoot(batchNum - 1)
+		if err != nil {
+			return nil, err
+		}
+
+		prevBlockHash = &ger.StateRoot
+	}
+
 	log.Info("4444444444", "prevBlockHash", prevBlockHash.Hex())
 	blockTime := block.Time()
 	ibs.SyncerPreExecuteStateSet(chainConfig, blockNum, blockTime, prevBlockHash, &blockGer, &l1BlockHash, gersInBetween)

@@ -271,7 +271,7 @@ func SpawnSequencingStage(
 			return err
 		}
 
-		ger, err := hermezDb.GetBatchGlobalExitRoot(batchNum)
+		ger, err := hermezDb.GetBatchGlobalExitRoot(batchNum - 1)
 		if err != nil {
 			return err
 		}
