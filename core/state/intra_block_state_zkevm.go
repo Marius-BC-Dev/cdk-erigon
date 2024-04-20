@@ -66,6 +66,7 @@ func (sdb *IntraBlockState) PreExecuteStateSet(chainConfig *chain.Config, blockN
 			sdb.ScalableSetTimestamp(blockTimestamp)
 		}
 
+		log.Info("999999 ", ", stateRoot = ", stateRoot.Hex())
 		//save prev block hash
 		sdb.scalableSetBlockHash(blockNumber-1, stateRoot)
 	}
@@ -88,6 +89,7 @@ func (sdb *IntraBlockState) SyncerPreExecuteStateSet(chainConfig *chain.Config, 
 			sdb.ScalableSetTimestamp(blockTimestamp)
 		}
 
+		log.Info("77777 ", ", stateRoot = ", prevBlockHash.Hex())
 		//save prev block hash
 		sdb.scalableSetBlockHash(blockNumber-1, prevBlockHash)
 
@@ -116,6 +118,7 @@ func (sdb *IntraBlockState) SyncerPreExecuteStateSet(chainConfig *chain.Config, 
 			}
 
 			//save prev block hash
+			log.Info("66666 ", ", stateRoot = ", prevBlockHash.Hex())
 			sdb.scalableSetBlockHash(blockNumber-1, prevBlockHash)
 
 			//save ger with l1blockhash
