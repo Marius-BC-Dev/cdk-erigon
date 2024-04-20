@@ -122,6 +122,10 @@ func (sdb *IntraBlockState) SyncerPreExecuteStateSet(chainConfig *chain.Config, 
 			if blockGer != nil && *blockGer != emptyHash {
 				sdb.WriteGerManagerL1BlockHash(*blockGer, *l1BlockHash)
 			}
+		} else {
+			if blockGer != nil && *blockGer != emptyHash {
+				sdb.WriteGlobalExitRootTimestamp(*blockGer, blockTimestamp)
+			}
 		}
 	}
 }
