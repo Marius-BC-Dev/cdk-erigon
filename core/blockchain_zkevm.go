@@ -294,6 +294,7 @@ func ExecuteBlockEphemerallyZk(
 		l2InfoRoot = libcommon.BigToHash(root)
 	}
 
+	log.Info("blockNum: ", blockNum, " , l2InfoRoot: ", l2InfoRoot.Hex())
 	ibs.PostExecuteStateSet(chainConfig, block.NumberU64(), &l2InfoRoot)
 
 	receiptSha := types.DeriveSha(receipts)
