@@ -219,9 +219,6 @@ func ExecuteBlockEphemerallyZk(
 			return nil, err
 		}
 
-		log.Info("0000000000000", "intermediateState", intermediateState.Hex(), "blockNum", blockNum)
-		log.Info("localReceipt", "localReceipt", localReceipt, "header.Root", header.Root.Hex())
-
 		// forkid8 tje poststate is empty
 		// forkid8 also fixed the bugs with logs and cumulative gas used
 		if !chainConfig.IsForkID8Elderberry(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) {
@@ -258,7 +255,7 @@ func ExecuteBlockEphemerallyZk(
 				receipts = append(receipts, receipt)
 			}
 		}
-		if !chainConfig.IsForkID7Etrog(block.NumberU64()) && !chainConfig.IsUpgradeEtrog(block.NonceU64()) {
+		if !chainConfig.IsForkID7Etrog(block.NumberU64()) && !chainConfig.IsUpgradeEtrog(block.NumberU64()) {
 			if err := ibs.ScalableSetSmtRootHash(roHermezDb); err != nil {
 				return nil, err
 			}
