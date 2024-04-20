@@ -129,7 +129,7 @@ func ExecuteBlockEphemerallyZk(
 	blockTime := block.Time()
 	ibs.SyncerPreExecuteStateSet(chainConfig, blockNum, blockTime, prevBlockHash, &blockGer, &l1BlockHash, gersInBetween)
 	blockInfoTree := blockinfo.NewBlockInfoTree()
-	if chainConfig.IsForkID8Elderberry(blockNum) {
+	if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsForkID7Etrog(blockNum) {
 		coinbase := block.Coinbase()
 
 		// this is a case when we have injected batches
@@ -282,7 +282,7 @@ func ExecuteBlockEphemerallyZk(
 	}
 
 	var l2InfoRoot libcommon.Hash
-	if chainConfig.IsForkID8Elderberry(blockNum) {
+	if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsForkID7Etrog(blockNum) {
 		// [zkevm] - set the block info tree root
 		root, err := blockInfoTree.SetBlockGasUsed(*usedGas)
 		if err != nil {

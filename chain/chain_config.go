@@ -89,6 +89,7 @@ type Config struct {
 	ForkID6IncaBerryBlock   *big.Int `json:"forkID6IncaBerryBlock,omitempty"`
 	ForkID7EtrogBlock       *big.Int `json:"forkID7EtrogBlock,omitempty"`
 	ForkID88ElderberryBlock *big.Int `json:"forkID88ElderberryBlock,omitempty"`
+	UpgradeEtrogBlock       *big.Int `json:upgradeEtrogBlock,omitempty`
 
 	SupportGasless bool `json:"supportGasless,omitempty"`
 }
@@ -239,6 +240,13 @@ func (c *Config) IsForkID7Etrog(num uint64) bool {
 
 func (c *Config) IsForkID8Elderberry(num uint64) bool {
 	return isForked(c.ForkID88ElderberryBlock, num)
+}
+
+func (c *Config) IsUpgradeEtrog(num uint64) bool {
+	if c.UpgradeEtrogBlock == nil {
+		return false
+	}
+	return c.UpgradeEtrogBlock.Uint64() == num
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
