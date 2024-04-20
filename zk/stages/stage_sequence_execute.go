@@ -265,6 +265,19 @@ func SpawnSequencingStage(
 	l1Recovery := cfg.zk.L1SyncStartBlock > 0
 
 	parentRoot := parentBlock.Root()
+	if cfg.chainConfig.IsUpgradeEtrog(nextBlockNum) {
+		batchNum, err := hermezDb.GetBatchNoByL2Block(nextBlockNum)
+		if err != nil {
+			return err
+		}
+
+		ger, err := hermezDb.GetBatchGlobalExitRoot(batchNum)
+		if err != nil {
+			return err
+		}
+
+		parentRoot = ger.StateRoot
+	}
 	if err = handleStateForNewBlockStarting(cfg.chainConfig, nextBlockNum, newBlockTimestamp, &parentRoot, l1TreeUpdate, ibs, hermezDb); err != nil {
 		return err
 	}
@@ -518,6 +531,7 @@ func processInjectedInitialBatch(
 	header.Time = injected.Timestamp
 
 	parentRoot := parentBlock.Root()
+
 	if err = handleStateForNewBlockStarting(cfg.chainConfig, 1, injected.Timestamp, &parentRoot, fakeL1TreeUpdate, ibs, hermezDb); err != nil {
 		return err
 	}
