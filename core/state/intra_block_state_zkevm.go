@@ -108,6 +108,7 @@ func (sdb *IntraBlockState) SyncerPreExecuteStateSet(chainConfig *chain.Config, 
 		// }
 
 		for _, ger := range *gerUpdates {
+			log.Info("ger: ", ger)
 			//save ger
 			sdb.WriteGlobalExitRootTimestamp(ger.GlobalExitRoot, ger.Timestamp)
 		}
