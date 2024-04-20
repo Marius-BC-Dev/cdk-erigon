@@ -205,6 +205,8 @@ func ExecuteBlockEphemerallyZk(
 			return nil, err
 		}
 
+		log.Info("0000000000000", "intermediateState", intermediateState.Hex(), "blockNum", blockNum)
+
 		// forkid8 tje poststate is empty
 		// forkid8 also fixed the bugs with logs and cumulative gas used
 		if !chainConfig.IsForkID8Elderberry(blockNum) {
