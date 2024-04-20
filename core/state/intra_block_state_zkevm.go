@@ -96,19 +96,33 @@ func (sdb *IntraBlockState) SyncerPreExecuteStateSet(chainConfig *chain.Config, 
 			sdb.WriteGerManagerL1BlockHash(*blockGer, *l1BlockHash)
 		}
 	} else {
-		if blockGer != nil && *blockGer != emptyHash {
-			blockGerUpdate := dstypes.GerUpdate{
-				GlobalExitRoot: *blockGer,
-				Timestamp:      blockTimestamp,
-			}
-			*gerUpdates = append(*gerUpdates, blockGerUpdate)
-		}
+		// if blockGer != nil && *blockGer != emptyHash {
+		// 	blockGerUpdate := dstypes.GerUpdate{
+		// 		GlobalExitRoot: *blockGer,
+		// 		Timestamp:      blockTimestamp,
+		// 	}
+		// 	*gerUpdates = append(*gerUpdates, blockGerUpdate)
+		// }
 
 		for _, ger := range *gerUpdates {
 			//save ger
 			sdb.WriteGlobalExitRootTimestamp(ger.GlobalExitRoot, ger.Timestamp)
 		}
 
+		if chainConfig.IsUpgradeEtrog(blockNumber) {
+			currentTimestamp := sdb.ScalableGetTimestamp()
+			if blockTimestamp > currentTimestamp {
+				sdb.ScalableSetTimestamp(blockTimestamp)
+			}
+
+			//save prev block hash
+			sdb.scalableSetBlockHash(blockNumber-1, prevBlockHash)
+
+			//save ger with l1blockhash
+			if blockGer != nil && *blockGer != emptyHash {
+				sdb.WriteGerManagerL1BlockHash(*blockGer, *l1BlockHash)
+			}
+		}
 	}
 }
 
