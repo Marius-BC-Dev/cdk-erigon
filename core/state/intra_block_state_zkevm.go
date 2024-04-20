@@ -46,7 +46,7 @@ func (sdb *IntraBlockState) GetTxCount() (uint64, error) {
 
 func (sdb *IntraBlockState) PostExecuteStateSet(chainConfig *chain.Config, blockNum uint64, blockInfoRoot *libcommon.Hash) {
 	//ETROG
-	if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) {
+	if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) || chainConfig.IsFork8(blockNum) {
 		sdb.scalableSetBlockInfoRoot(blockInfoRoot)
 	}
 }
@@ -61,7 +61,7 @@ func (sdb *IntraBlockState) PreExecuteStateSet(chainConfig *chain.Config, blockN
 	sdb.scalableSetBlockNum(blockNumber)
 
 	//ETROG
-	if chainConfig.IsForkID7Etrog(blockNumber) || chainConfig.IsUpgradeEtrog(blockNumber) {
+	if chainConfig.IsForkID7Etrog(blockNumber) || chainConfig.IsUpgradeEtrog(blockNumber) || chainConfig.IsFork8(blockNumber) {
 		currentTimestamp := sdb.ScalableGetTimestamp()
 		if blockTimestamp > currentTimestamp {
 			sdb.ScalableSetTimestamp(blockTimestamp)

@@ -145,7 +145,7 @@ func ExecuteBlockEphemerallyZk(
 	blockTime := block.Time()
 	ibs.SyncerPreExecuteStateSet(chainConfig, blockNum, blockTime, prevBlockHash, &blockGer, &l1BlockHash, gersInBetween)
 	blockInfoTree := blockinfo.NewBlockInfoTree()
-	if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) {
+	if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) || chainConfig.IsFork8(blockNum) {
 		coinbase := block.Coinbase()
 
 		// this is a case when we have injected batches
@@ -262,7 +262,7 @@ func ExecuteBlockEphemerallyZk(
 			}
 		}
 
-		if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) {
+		if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) || chainConfig.IsFork8(blockNum) {
 			txSender, _ := tx.GetSender()
 			l2TxHash, err := txTypes.ComputeL2TxHash(
 				tx.GetChainID().ToBig(),
@@ -298,7 +298,7 @@ func ExecuteBlockEphemerallyZk(
 	}
 
 	var l2InfoRoot libcommon.Hash
-	if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) {
+	if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) || chainConfig.IsFork8(blockNum) {
 		// [zkevm] - set the block info tree root
 		root, err := blockInfoTree.SetBlockGasUsed(*usedGas)
 		if err != nil {
