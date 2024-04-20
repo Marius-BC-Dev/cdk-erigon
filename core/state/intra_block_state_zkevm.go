@@ -45,7 +45,7 @@ func (sdb *IntraBlockState) GetTxCount() (uint64, error) {
 
 func (sdb *IntraBlockState) PostExecuteStateSet(chainConfig *chain.Config, blockNum uint64, blockInfoRoot *libcommon.Hash) {
 	//ETROG
-	if chainConfig.IsForkID7Etrog(blockNum) {
+	if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) {
 		sdb.scalableSetBlockInfoRoot(blockInfoRoot)
 	}
 }
