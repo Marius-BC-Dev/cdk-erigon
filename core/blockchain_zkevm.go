@@ -256,7 +256,7 @@ func ExecuteBlockEphemerallyZk(
 				receipts = append(receipts, receipt)
 			}
 		}
-		if !chainConfig.IsForkID7Etrog(block.NumberU64()) && !chainConfig.IsUpgradeEtrog(block.NumberU64()) {
+		if !chainConfig.IsForkID7Etrog(block.NumberU64()) && !chainConfig.IsUpgradeEtrog(block.NumberU64()) && !chainConfig.IsFork8(blockNum) {
 			if err := ibs.ScalableSetSmtRootHash(roHermezDb); err != nil {
 				return nil, err
 			}
