@@ -249,6 +249,13 @@ func (c *Config) IsUpgradeEtrog(num uint64) bool {
 	return c.UpgradeEtrogBlock.Uint64() == num
 }
 
+func (c *Config) IsFork8(num uint64) bool {
+	if c.UpgradeEtrogBlock == nil {
+		return false
+	}
+	return c.UpgradeEtrogBlock.Uint64() < num
+}
+
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *Config) CheckCompatible(newcfg *Config, height uint64) *chain.ConfigCompatError {
