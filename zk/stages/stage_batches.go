@@ -301,6 +301,7 @@ LOOP:
 				break
 			}
 
+			log.Info("gerUpdateChan", "gerUpdate", gerUpdate)
 			// NB: we won't get these post Etrog (fork id 7)
 			if err := hermezDb.WriteBatchGlobalExitRoot(gerUpdate.BatchNumber, gerUpdate); err != nil {
 				return fmt.Errorf("write batch global exit root error: %v", err)
@@ -745,6 +746,8 @@ func writeL2Block(eriDb ErigonDb, hermezDb HermezDb, l2Block *types.FullL2Block)
 	if err := hermezDb.WriteBlockBatch(l2Block.L2BlockNumber, l2Block.BatchNumber); err != nil {
 		return fmt.Errorf("write block batch error: %v", err)
 	}
+
+	log.Info("kkkkkkkk", "l2Block.BatchNumber", l2Block.BatchNumber, "l2Block.BatchNumber", l2Block.BatchNumber)
 
 	return nil
 }
