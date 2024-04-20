@@ -60,7 +60,7 @@ func (sdb *IntraBlockState) PreExecuteStateSet(chainConfig *chain.Config, blockN
 	sdb.scalableSetBlockNum(blockNumber)
 
 	//ETROG
-	if chainConfig.IsForkID7Etrog(blockNumber) {
+	if chainConfig.IsForkID7Etrog(blockNumber) || chainConfig.IsUpgradeEtrog(blockNumber) {
 		currentTimestamp := sdb.ScalableGetTimestamp()
 		if blockTimestamp > currentTimestamp {
 			sdb.ScalableSetTimestamp(blockTimestamp)
