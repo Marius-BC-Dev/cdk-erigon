@@ -126,6 +126,7 @@ func ExecuteBlockEphemerallyZk(
 		return nil, err
 	}
 
+	log.Info("4444444444", "prevBlockHash", prevBlockHash.Hex())
 	blockTime := block.Time()
 	ibs.SyncerPreExecuteStateSet(chainConfig, blockNum, blockTime, prevBlockHash, &blockGer, &l1BlockHash, gersInBetween)
 	blockInfoTree := blockinfo.NewBlockInfoTree()
