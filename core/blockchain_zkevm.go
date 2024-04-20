@@ -210,11 +210,11 @@ func ExecuteBlockEphemerallyZk(
 
 		// forkid8 tje poststate is empty
 		// forkid8 also fixed the bugs with logs and cumulative gas used
-		if !chainConfig.IsForkID8Elderberry(blockNum) {
+		if !chainConfig.IsForkID8Elderberry(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) {
 			// the stateroot in the transactions that comes from the datastream
 			// is the one after smart contract writes so it can't be used
 			// but since pre forkid7 blocks have 1 tx only, we can use the block root
-			if chainConfig.IsForkID7Etrog(blockNum) {
+			if chainConfig.IsForkID7Etrog(blockNum) || chainConfig.IsUpgradeEtrog(blockNum) {
 				receipt.PostState = intermediateState.Bytes()
 			} else {
 				receipt.PostState = header.Root.Bytes()
