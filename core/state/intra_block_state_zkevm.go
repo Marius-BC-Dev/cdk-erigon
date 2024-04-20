@@ -218,7 +218,7 @@ func (sdb *IntraBlockState) WriteGlobalExitRootTimestamp(ger libcommon.Hash, tim
 	mapKey := keccak256.Hash(d1, d2)
 	mkh := libcommon.BytesToHash(mapKey)
 	val := uint256.NewInt(0).SetUint64(timestamp)
-	log.Info("aaaaaabbbbbb ", " ,mkh: ", mkh.Hex(), " ,d1: ", d1)
+	log.Info("aaaaaabbbbbb ", " ,mkh: ", mkh.Hex(), " ,ger: ", ger.Hex())
 	sdb.SetState(GER_MANAGER_ADDRESS, &mkh, *val)
 }
 
