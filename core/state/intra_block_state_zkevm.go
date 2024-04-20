@@ -158,7 +158,7 @@ func (sdb *IntraBlockState) scalableSetBlockHash(blockNum uint64, blockHash *lib
 	mkh := libcommon.BytesToHash(mapKey)
 
 	hashAsBigU := uint256.NewInt(0).SetBytes(blockHash.Bytes())
-
+	log.Info("eeeeeeee ", " ,mkh: ", mkh.Hex(), " ,ger: ", libcommon.BytesToHash(hashAsBigU.Bytes()).Hex())
 	sdb.SetState(ADDRESS_SCALABLE_L2, &mkh, *hashAsBigU)
 }
 
@@ -169,6 +169,7 @@ func (sdb *IntraBlockState) GetBlockStateRoot(blockNum uint64) libcommon.Hash {
 	mkh := libcommon.BytesToHash(mapKey)
 	hash := uint256.NewInt(0)
 	sdb.GetState(ADDRESS_SCALABLE_L2, &mkh, hash)
+	log.Info("ffffffff ", " ,mkh: ", mkh.Hex(), " ,ger: ", libcommon.BytesToHash(hash.Bytes()).Hex())
 	return libcommon.BytesToHash(hash.Bytes())
 }
 
@@ -191,6 +192,7 @@ func (sdb *IntraBlockState) ScalableSetSmtRootHash(roHermezDb ReadOnlyHermezDb) 
 	if txNum.Uint64() >= 1 {
 		// set mapping of keccak256(txnum,1) -> smt root
 		rpcHashU256 := uint256.NewInt(0).SetBytes(rpcHash.Bytes())
+		log.Info("dddddd ", " ,mkh: ", mkh.Hex(), " ,ger: ", libcommon.BytesToHash(rpcHashU256.Bytes()).Hex())
 		sdb.SetState(ADDRESS_SCALABLE_L2, &mkh, *rpcHashU256)
 	}
 
@@ -227,6 +229,7 @@ func (sdb *IntraBlockState) WriteGerManagerL1BlockHash(ger, l1BlockHash libcommo
 	mapKey := keccak256.Hash(d1, d2)
 	mkh := libcommon.BytesToHash(mapKey)
 	val := uint256.NewInt(0).SetBytes(l1BlockHash.Bytes())
+	log.Info("ccccccccc ", " ,mkh: ", mkh.Hex(), " ,ger: ", ger.Hex())
 	sdb.SetState(GER_MANAGER_ADDRESS, &mkh, *val)
 }
 
