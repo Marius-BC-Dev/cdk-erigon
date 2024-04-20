@@ -120,8 +120,10 @@ func (sdb *IntraBlockState) SyncerPreExecuteStateSet(chainConfig *chain.Config, 
 			}
 
 			//save prev block hash
+			l := len(*gerUpdates)
 			log.Info("66666 ", ", stateRoot = ", prevBlockHash.Hex())
-			sdb.scalableSetBlockHash(blockNumber-1, prevBlockHash)
+			stateRoot := libcommon.BytesToHash((*gerUpdates)[l-1].StateRoot.Bytes())
+			sdb.scalableSetBlockHash(blockNumber-1, &stateRoot)
 
 			//save ger with l1blockhash
 			if blockGer != nil && *blockGer != emptyHash {
