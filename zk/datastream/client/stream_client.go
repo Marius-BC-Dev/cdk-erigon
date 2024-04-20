@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/ledgerwatch/erigon/zk/datastream/types"
-	"github.com/ledgerwatch/log/v3"
 )
 
 type StreamType uint64
@@ -303,7 +302,6 @@ func (c *StreamClient) readAllFullL2BlocksToChannel() error {
 		c.lastWrittenTime.Store(time.Now().UnixNano())
 		c.streaming.Store(true)
 
-		log.Info("fullBlock", "fullBlock.BatchNumber", fullBlock.BatchNumber, "fullBlock.L2BlockNumber", fullBlock.L2BlockNumber)
 		c.l2BlockChan <- *fullBlock
 	}
 
