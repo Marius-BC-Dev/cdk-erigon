@@ -64,7 +64,7 @@ func ExecuteBlockEphemerallyZk(
 	blockGasLimit := block.GasLimit()
 
 	//[hack] - on forkid7 this gas limit was used for execution but rpc is now returning forkid8 gas limit
-	log.Info("ExecuteBlockEphemerallyZk", "block.NumberU64()", block.NumberU64(), "chainConfig.IsForkID8Elderberry(block.NumberU64())", chainConfig.IsForkID8Elderberry(block.NumberU64()))
+	log.Info("ExecuteBlockEphemerallyZk", "block.NumberU64()", block.NumberU64(), "chainConfig.ForkID88ElderberryBlock", chainConfig.ForkID88ElderberryBlock, "chainConfig.IsForkID8Elderberry(block.NumberU64())", chainConfig.IsForkID8Elderberry(block.NumberU64()))
 	if !chainConfig.IsForkID8Elderberry(block.NumberU64()) {
 		blockGasLimit = 18446744073709551615
 	}
