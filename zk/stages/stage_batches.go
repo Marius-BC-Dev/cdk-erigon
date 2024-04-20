@@ -747,7 +747,7 @@ func writeL2Block(eriDb ErigonDb, hermezDb HermezDb, l2Block *types.FullL2Block)
 		return fmt.Errorf("write block batch error: %v", err)
 	}
 
-	log.Info("kkkkkkkk", "l2Block.BatchNumber", l2Block.BatchNumber, "l2Block.BatchNumber", l2Block.BatchNumber)
+	log.Info("kkkkkkkk", "l2Block.L2BlockNumber", l2Block.L2BlockNumber, "l2Block.BatchNumber", l2Block.BatchNumber)
 
 	return nil
 }
