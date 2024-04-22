@@ -25,7 +25,6 @@ import (
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 
 	"github.com/ledgerwatch/erigon/chain"
-	"github.com/ledgerwatch/log/v3"
 
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 
@@ -64,7 +63,6 @@ func ExecuteBlockEphemerallyZk(
 	blockGasLimit := block.GasLimit()
 
 	//[hack] - on forkid7 this gas limit was used for execution but rpc is now returning forkid8 gas limit
-	log.Info("ExecuteBlockEphemerallyZk", "block.NumberU64()", block.NumberU64(), "chainConfig.ForkID88ElderberryBlock", chainConfig.ForkID88ElderberryBlock, "chainConfig.IsForkID8Elderberry(block.NumberU64())", chainConfig.IsForkID8Elderberry(block.NumberU64()))
 	if !chainConfig.IsForkID8Elderberry(block.NumberU64()) {
 		blockGasLimit = 18446744073709551615
 	}
@@ -327,16 +325,12 @@ func ExecuteBlockEphemerallyZk(
 		//	return nil, fmt.Errorf("bloom computed by execution: %x, in header: %x", bloom, header.Bloom)
 		//}
 	}
-	log.Info("FinalizeBlockExecution 1")
 	if !vmConfig.ReadOnly {
 		txs := blockTransactions
-		log.Info("FinalizeBlockExecution 2", "len(txs)", len(txs))
 		if _, _, _, err := FinalizeBlockExecution(engine, stateReader, block.Header(), txs, block.Uncles(), stateWriter, chainConfig, ibs, receipts, block.Withdrawals(), chainReader, false, excessDataGas); err != nil {
 			return nil, err
 		}
 	}
-
-	log.Info("testest ", "TxRoot", types.DeriveSha(includedTxs))
 
 	blockLogs := ibs.Logs()
 	execRs := &EphemeralExecResult{

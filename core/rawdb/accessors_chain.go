@@ -61,7 +61,6 @@ func ReadCanonicalHash(db kv.Getter, number uint64) (libcommon.Hash, error) {
 
 // WriteCanonicalHash stores the hash assigned to a canonical block number.
 func WriteCanonicalHash(db kv.Putter, hash libcommon.Hash, number uint64) error {
-	log.Info("WriteCanonicalHash", "hash", hash, "number", number)
 	if err := db.Put(kv.HeaderCanonical, hexutility.EncodeTs(number), hash.Bytes()); err != nil {
 		return fmt.Errorf("failed to store number to hash mapping: %w", err)
 	}
@@ -329,7 +328,7 @@ func WriteHeader(db kv.Putter, header *types.Header) {
 		number  = header.Number.Uint64()
 		encoded = hexutility.EncodeTs(number)
 	)
-	log.Info("WriteHeader", "height", number)
+
 	if err := db.Put(kv.HeaderNumber, hash[:], encoded); err != nil {
 		log.Crit("Failed to store hash to number mapping", "err", err)
 	}
