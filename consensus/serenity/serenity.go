@@ -10,7 +10,6 @@ import (
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/chain"
-	"github.com/ledgerwatch/erigon/zkevm/log"
 
 	"github.com/ledgerwatch/erigon/consensus"
 	"github.com/ledgerwatch/erigon/consensus/aura"
@@ -129,13 +128,10 @@ func (s *Serenity) Finalize(config *chain.Config, header *types.Header, state *s
 	txs types.Transactions, uncles []*types.Header, r types.Receipts, withdrawals []*types.Withdrawal,
 	chain consensus.ChainHeaderReader, syscall consensus.SystemCall,
 ) (types.Transactions, types.Receipts, error) {
-	log.Info("Serenity")
 	if !IsPoSHeader(header) {
-		log.Info("1")
 		return s.eth1Engine.Finalize(config, header, state, txs, uncles, r, withdrawals, chain, syscall)
 	}
 	if auraEngine, ok := s.eth1Engine.(*aura.AuRa); ok {
-		log.Info("2")
 		if err := auraEngine.ApplyRewards(header, state, syscall); err != nil {
 			return nil, nil, err
 		}
@@ -145,15 +141,12 @@ func (s *Serenity) Finalize(config *chain.Config, header *types.Header, state *s
 			}
 		}
 	} else {
-		log.Info("3")
 		for _, w := range withdrawals {
-			log.Info("31", "w", w)
 			amountInWei := new(uint256.Int).Mul(uint256.NewInt(w.Amount), uint256.NewInt(params.GWei))
 			state.AddBalance(w.Address, amountInWei)
 		}
 	}
 	if config.IsCancun(header.Time) {
-		log.Info("4")
 		parent := chain.GetHeaderByHash(header.ParentHash)
 		if parent == nil {
 			return nil, nil, fmt.Errorf("Could not find the parent of block %v to get excess data gas", header.Number.Uint64())
