@@ -141,7 +141,6 @@ func ExecuteBlockEphemerallyZk(
 		prevBlockHash = &ger.StateRoot
 	}
 
-	log.Info("4444444444", "prevBlockHash", prevBlockHash.Hex())
 	blockTime := block.Time()
 	ibs.SyncerPreExecuteStateSet(chainConfig, blockNum, blockTime, prevBlockHash, &blockGer, &l1BlockHash, gersInBetween)
 	blockInfoTree := blockinfo.NewBlockInfoTree()
@@ -175,7 +174,7 @@ func ExecuteBlockEphemerallyZk(
 	noop := state.NewNoopWriter()
 	logIndex := int64(0)
 	usedGas := new(uint64)
-	log.Info("111111", "blockNum: ", blockNum, " , len(blockTransactions): ", len(blockTransactions))
+
 	for txIndex, tx := range blockTransactions {
 		ibs.Prepare(tx.Hash(), block.Hash(), txIndex)
 		writeTrace := false
@@ -307,7 +306,6 @@ func ExecuteBlockEphemerallyZk(
 		l2InfoRoot = libcommon.BigToHash(root)
 	}
 
-	log.Info("tttt", "blockNum: ", blockNum, ",l2InfoRoot: ", l2InfoRoot.Hex())
 	ibs.PostExecuteStateSet(chainConfig, block.NumberU64(), &l2InfoRoot)
 
 	receiptSha := types.DeriveSha(receipts)

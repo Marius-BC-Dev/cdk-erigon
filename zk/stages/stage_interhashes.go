@@ -292,7 +292,6 @@ func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb
 			}
 			addr = common.BytesToAddress(k)
 			inc = a.Incarnation
-			log.Info("aaaaaaa", "addr", addr, "account", *a)
 			// empty storage of previous account
 			as = make(map[string]string)
 		} else { // otherwise we're reading storage

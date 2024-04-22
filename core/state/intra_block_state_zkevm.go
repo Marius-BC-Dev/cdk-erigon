@@ -67,7 +67,6 @@ func (sdb *IntraBlockState) PreExecuteStateSet(chainConfig *chain.Config, blockN
 			sdb.ScalableSetTimestamp(blockTimestamp)
 		}
 
-		log.Info("999999 ", ", stateRoot = ", stateRoot.Hex())
 		//save prev block hash
 		sdb.scalableSetBlockHash(blockNumber-1, stateRoot)
 	}
@@ -90,7 +89,6 @@ func (sdb *IntraBlockState) SyncerPreExecuteStateSet(chainConfig *chain.Config, 
 			sdb.ScalableSetTimestamp(blockTimestamp)
 		}
 
-		log.Info("77777 ", ", stateRoot = ", prevBlockHash.Hex())
 		//save prev block hash
 		sdb.scalableSetBlockHash(blockNumber-1, prevBlockHash)
 
@@ -120,9 +118,6 @@ func (sdb *IntraBlockState) SyncerPreExecuteStateSet(chainConfig *chain.Config, 
 			}
 
 			//save prev block hash
-			// l := len(*gerUpdates)
-			// log.Info("66666 ", ", stateRoot = ", prevBlockHash.Hex())
-			// stateRoot := libcommon.BytesToHash((*gerUpdates)[l-1].StateRoot.Bytes())
 			sdb.scalableSetBlockHash(blockNumber-1, prevBlockHash)
 
 			//save ger with l1blockhash
@@ -165,7 +160,6 @@ func (sdb *IntraBlockState) scalableSetBlockHash(blockNum uint64, blockHash *lib
 	mkh := libcommon.BytesToHash(mapKey)
 
 	hashAsBigU := uint256.NewInt(0).SetBytes(blockHash.Bytes())
-	log.Info("eeeeeeee ", " ,mkh: ", mkh.Hex(), " ,ger: ", libcommon.BytesToHash(hashAsBigU.Bytes()).Hex())
 	sdb.SetState(ADDRESS_SCALABLE_L2, &mkh, *hashAsBigU)
 }
 
@@ -176,7 +170,6 @@ func (sdb *IntraBlockState) GetBlockStateRoot(blockNum uint64) libcommon.Hash {
 	mkh := libcommon.BytesToHash(mapKey)
 	hash := uint256.NewInt(0)
 	sdb.GetState(ADDRESS_SCALABLE_L2, &mkh, hash)
-	log.Info("ffffffff ", " ,mkh: ", mkh.Hex(), " ,ger: ", libcommon.BytesToHash(hash.Bytes()).Hex())
 	return libcommon.BytesToHash(hash.Bytes())
 }
 
@@ -199,7 +192,6 @@ func (sdb *IntraBlockState) ScalableSetSmtRootHash(roHermezDb ReadOnlyHermezDb) 
 	if txNum.Uint64() >= 1 {
 		// set mapping of keccak256(txnum,1) -> smt root
 		rpcHashU256 := uint256.NewInt(0).SetBytes(rpcHash.Bytes())
-		log.Info("dddddd ", " ,mkh: ", mkh.Hex(), " ,ger: ", libcommon.BytesToHash(rpcHashU256.Bytes()).Hex())
 		sdb.SetState(ADDRESS_SCALABLE_L2, &mkh, *rpcHashU256)
 	}
 
@@ -211,8 +203,6 @@ func (sdb *IntraBlockState) ScalableSetBlockNumberToHash(blockNumber uint64, rod
 	if err != nil {
 		return err
 	}
-
-	log.Info("8888888 ", ", blockNumber = ", blockNumber, ", rpcHash = ", rpcHash.Hex())
 
 	sdb.scalableSetBlockHash(blockNumber, &rpcHash)
 
@@ -238,7 +228,6 @@ func (sdb *IntraBlockState) WriteGerManagerL1BlockHash(ger, l1BlockHash libcommo
 	mapKey := keccak256.Hash(d1, d2)
 	mkh := libcommon.BytesToHash(mapKey)
 	val := uint256.NewInt(0).SetBytes(l1BlockHash.Bytes())
-	log.Info("ccccccccc ", " ,mkh: ", mkh.Hex(), " ,ger: ", ger.Hex())
 	sdb.SetState(GER_MANAGER_ADDRESS, &mkh, *val)
 }
 
@@ -248,7 +237,6 @@ func (sdb *IntraBlockState) WriteGlobalExitRootTimestamp(ger libcommon.Hash, tim
 	mapKey := keccak256.Hash(d1, d2)
 	mkh := libcommon.BytesToHash(mapKey)
 	val := uint256.NewInt(0).SetUint64(timestamp)
-	log.Info("aaaaaabbbbbb ", " ,mkh: ", mkh.Hex(), " ,ger: ", ger.Hex())
 	sdb.SetState(GER_MANAGER_ADDRESS, &mkh, *val)
 }
 

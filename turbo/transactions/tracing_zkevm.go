@@ -107,7 +107,7 @@ func ComputeTxEnv_ZkEvm(ctx context.Context, engine consensus.EngineReader, bloc
 	if err != nil {
 		return nil, evmtypes.BlockContext{}, evmtypes.TxContext{}, nil, nil, err
 	}
-	log.Info("33333333", "parentHeader.Root", parentHeader.Root.Hex())
+
 	statedb.SyncerPreExecuteStateSet(cfg, BlockContext.BlockNumber, BlockContext.Time, &parentHeader.Root, &blockGer, &l1BlockHash, gersInBetween)
 	///////////////////////////////////////////
 	// [zkevm] finish set preexecution state //
