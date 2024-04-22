@@ -301,7 +301,6 @@ LOOP:
 				break
 			}
 
-			log.Info("gerUpdateChan", "gerUpdate", gerUpdate)
 			// NB: we won't get these post Etrog (fork id 7)
 			if err := hermezDb.WriteBatchGlobalExitRoot(gerUpdate.BatchNumber, gerUpdate); err != nil {
 				return fmt.Errorf("write batch global exit root error: %v", err)
